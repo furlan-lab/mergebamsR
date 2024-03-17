@@ -1,8 +1,0 @@
-#' Augment data
-
-#' @export
-#' 
-
-sayhello<-function(){
-  hello()
-}
