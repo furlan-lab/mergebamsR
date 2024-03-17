@@ -1,0 +1,22 @@
+#![allow(non_snake_case)]
+
+use extendr_api::prelude::*;
+mod mergebamsR;
+
+
+/// hello
+/// @export
+/// @keywords internal
+#[extendr]
+fn hello(){
+  eprintln!("{:?}", "Hello!");
+}
+
+
+// Macro to generate exports.
+// This ensures exported functions are registered with R.
+// See corresponding C code in `entrypoint.c`.
+extendr_module! {
+  mod mergebamsR;
+  fn hello;
+}

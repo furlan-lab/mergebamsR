@@ -1,0 +1,26 @@
+#![allow(non_snake_case)]
+
+use extendr_api::prelude::*;
+mod mergebamsR;
+
+
+/// mergebams_rust
+/// @export
+/// @keywords internal
+#[extendr]
+fn mergebams_rust_helper(bams: Robj, out_path: Robj, names: Robj, prefixes: Robj){
+  let bam_files: Vec<&str> = bams.as_str_vector().unwrap();
+  let out_path: &str = out_path.as_str_vector().unwrap().first().unwrap();
+  let read_names: Vec<&str> = names.as_str_vector().unwrap();
+  let prefixes: Vec<&str> = prefixes.as_str_vector().unwrap();
+  mergebamsR::mergebams_rust(bam_files, out_path, read_names, prefixes)
+}
+
+
+// Macro to generate exports.
+// This ensures exported functions are registered with R.
+// See corresponding C code in `entrypoint.c`.
+extendr_module! {
+  mod mergebamsR;
+  fn mergebams_rust_helper;
+}
