@@ -1,0 +1,10 @@
+pandoc: 3.1.1
+pkgdown: 2.0.7
+pkgdown_sha: ~
+articles:
+  HowTo: HowTo.html
+last_built: 2024-03-17T20:45Z
+urls:
+  reference: https://furlan-lab.github.io//reference
+  article: https://furlan-lab.github.io//articles
+
