@@ -3,8 +3,6 @@ title: "How to use mergebamsR"
 output: html_document
 date: "2024-03-17"
 always_allow_html: true
-editor_options: 
-  chunk_output_type: console
 ---
 
 ## Installing Rust
@@ -30,6 +28,7 @@ suppressPackageStartupMessages({
   library(mergebamsR)
 })
 
+outpath<-"~/tmp/out"
 ```
 
 ## Simple merging of two bams located in test folder
@@ -37,7 +36,7 @@ suppressPackageStartupMessages({
 These two bam files are located in the test directory of this repository.  To create a merge of the two bam files in the test/out folder, run the following.
 
 ```{r}
-mergebams(bams = c("test/bam1.bam","test/bam2.bam"), out_path = "test/out")
+mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"), out_path = outpath)
 ```
 
 
@@ -46,16 +45,15 @@ mergebams(bams = c("test/bam1.bam","test/bam2.bam"), out_path = "test/out")
 When merging bams from single cell data, it may be advantageous to include additional information in the cell barcode tag that reflects the merge.  In this case we are merging the two bam files but prepending the cell barcodes with the prefixes "test_1_" for the first file and "test_2_" for the second file.  The prefixes parameter must contain a character vector of prefixes of equal length to the character vector of the bams argument.
 
 ```{r}
-mergebams(bams = c("test/bam1.bam","test/bam2.bam"), out_path = "test/out"
-        , prefixes = c("test1_","test2_"))
+mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"), out_path = outpath, prefixes = c("test1_","test2_"))
 ```
 
 ## Filtering
 
 Finally, it may also be useful to filter bam files to include only specific reads.  mergebamsR provides this feature.  By supplying a list of character vectors containing read names to be kept, one can filter the output bam to only have reads of interest.  Again, the list length needs to be the same length as the bams character vector input.
 ```{r}
-mergebams(bams = c("test/bam1.bam","test/bam2.bam"), 
-          out_path = "test/out", 
+mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"), 
+          out_path = outpath, 
           prefixes = c("test1_","test2_"), 
           names = list(c("VH00738:4:AAAW2TWHV:1:2512:20125:30230", "VH00738:4:AAAW2TWHV:1:1612:47827:5146"), 
                        c("VH00738:4:AAAW2TWHV:2:2114:49683:55957", "VH00738:4:AAAW2TWHV:2:1203:65210:13741")))
@@ -64,8 +62,8 @@ mergebams(bams = c("test/bam1.bam","test/bam2.bam"),
 For situations in which only certain bam files are to be filtered, include a NULL in the list for those files that are not meant to be filtered.  In the below, we filter two reads from bam1.bam and retain all reads from bam2.bam.
 
 ```{r}
-mergebams(bams = c("test/bam1.bam","test/bam2.bam"), 
-          out_path = "test/out", 
+mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"), 
+          out_path = outpath, 
           prefixes = c("test1_","test2_"), 
           names = list(c("VH00738:4:AAAW2TWHV:1:2512:20125:30230", "VH00738:4:AAAW2TWHV:1:1612:47827:5146"), 
                        NULL))

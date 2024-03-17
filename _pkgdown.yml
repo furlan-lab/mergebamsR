@@ -51,6 +51,7 @@ reference:
   desc: Main functions used in mergebamsR
   contents:
   - mergebams
+  - mergebamsR-package
 articles:
 - title: Get Started
   navbar: Get Started

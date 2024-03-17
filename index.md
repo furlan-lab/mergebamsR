@@ -1,5 +1,5 @@
 <hr>
-<p align="left"><img src="man/figures/viewmaster.png" alt="" width="300"></a></p>
+<p align="left"><img src="man/figures/mergebamsR.png" alt="" width="300"></a></p>
 <hr>
 
 [![Project Status: Active – The project has reached a stable, usable state and is being activelydeveloped.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
@@ -12,7 +12,7 @@ mergebamsR is a package that enables merge of bams quickly and efficiently using
 
 First you need to have an updated Rust installation. Go to this [site](https://www.rust-lang.org/tools/install) to learn how to install Rust.
 
-To install development version of viewmastR:
+To install mergebamsR:
 
 ```r
 remotes::install_github("furlan-lab/mergebamsR")
@@ -20,7 +20,7 @@ remotes::install_github("furlan-lab/mergebamsR")
 
 ## How to start
 
-We have a few vignettes for 
+We have a few vignette...
 
 - `vignette("HowTo")` to explore the basics of the package. 
 
