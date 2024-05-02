@@ -1,36 +1,17 @@
 #![allow(non_snake_case)]
 
+// use std::usize;
+
+// use bam::record::tags;
 use extendr_api::prelude::*;
-mod mergebamsR;
+mod mergebams;
+mod utils;
 
 
 /// mergebams_rust
 /// @export
 /// @keywords internal
 #[extendr]
-// fn mergebams_rust_helper(bams: Robj, out_path: Robj, names: Robj, prefixes: Robj) {
-//   let bam_files: Vec<&str> = match bams.as_str_vector() {
-//     Some(files) => files,
-//     None => return,
-//   };
-//   let out_path: &str = match out_path.as_str_vector() {
-//     Some(files) => files[0],
-//     None => return,
-//   };
-//   let mut read_names: Vec<Vec<&str>> = vec![];
-//   names.as_list().unwrap().iter().for_each(|x | {
-//     if x.1.is_null(){
-//       read_names.push(vec![&""]);
-//     } else {
-//       let y = x.1.as_str_vector().unwrap();
-//       read_names.push(y);
-//     }
-//     // read_names.push(x.1.as_str_vector().unwrap());
-//   });
-//   let prefixes: Vec<&str> = prefixes.as_str_vector().unwrap();
-//   mergebamsR::mergebams_rust(bam_files, out_path, read_names, prefixes)
-// }
-
 fn mergebams_rust_helper(bams: Robj, out_path: Robj, names: Robj, prefixes: Robj) {
     let bam_files: Vec<&str> = match bams.as_str_vector() {
         Some(files) => files,
@@ -67,7 +48,46 @@ fn mergebams_rust_helper(bams: Robj, out_path: Robj, names: Robj, prefixes: Robj
     // let prefixes: Vec<&str> = prefixes.as_str_vector().unwrap();
 
     // Assuming mergebamsR::mergebams_rust now accepts Vec<String> instead of Vec<&str>
-    mergebamsR::mergebams_rust(bam_files, &out_path, read_names, prefixes);
+    mergebams::mergebams_rust(bam_files, &out_path, read_names, prefixes);
+}
+
+/// peekbam_rust
+/// @export
+/// @keywords internal
+#[extendr]
+fn peekbam_rust_helper(bam: Robj, n: Robj, tag: Robj) -> Robj{
+    let bam_file: &str  = match bam.as_str_vector() {
+        Some(files) => files[0],
+        None => {
+                  eprintln!("ERROR: bams is not a string vector");
+                  return Robj::from(0)
+                },
+    };
+    let n:u64 = match n.as_integer() {
+        Some(n) => <i32 as extendr_api::TryInto<u64>>::try_into(n).unwrap(),
+        None => {
+                  eprintln!("ERROR: n is not an integer");
+                  return Robj::from(0)
+                },
+    };
+    let tag: &str = match tag.as_str_vector() {
+        Some(tags) => tags[0],
+        None => {
+                  eprintln!("ERROR: tag is not a string");
+                  return Robj::from(0)
+                },
+    };
+
+    // let mut tags: Result<Vec<&str>> = Ok(Vec::new());
+    let tags = utils::peekbam_rust(bam_file, n, tag);
+    // match tags {
+    //     Ok(tags) => Robj::from(tags),
+    //     Err(_) => {
+    //         eprintln!("ERROR: peekbam_rust failed");
+    //         return Robj::from(0)
+    //     }
+    // }
+    Robj::from(&tags.unwrap())
 }
 
 
@@ -75,6 +95,7 @@ fn mergebams_rust_helper(bams: Robj, out_path: Robj, names: Robj, prefixes: Robj
 // This ensures exported functions are registered with R.
 // See corresponding C code in `entrypoint.c`.
 extendr_module! {
-  mod mergebamsR;
-  fn mergebams_rust_helper;
+    mod mergebamsR;
+    fn mergebams_rust_helper;
+    fn peekbam_rust_helper;
 }
