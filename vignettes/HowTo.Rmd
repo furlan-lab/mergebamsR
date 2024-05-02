@@ -3,6 +3,8 @@ title: "How to use mergebamsR"
 output: html_document
 date: "2024-03-17"
 always_allow_html: true
+editor_options: 
+  chunk_output_type: console
 ---
 
 ## Installing Rust
@@ -28,7 +30,7 @@ suppressPackageStartupMessages({
   library(mergebamsR)
 })
 
-outpath<-"~/tmp/out"
+outpath<-"/Users/sfurlan/tmp/out"
 ```
 
 ## Simple merging of two bams located in test folder
@@ -69,7 +71,27 @@ mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"),
                        NULL))
 ```
 
+## Subset individual BAM files
 
+Although other tools already exist for subsetting bam files using shell scripting, it may be helpful to subset BAM files by BAM tag using an R interface such that single-cell toolkits such as Seurat, Monocle, or SCE can be run adjacent.  mergebamsR provides this usability.  Currently only one bam file is supported as input.  The number of each elements of the following should all be the same:
+1. the list "tags" which specifies desired TAGS to be captured in each output file
+2. a vector of file output names
+3. optional prefixes to be added to each TAG
+
+
+TAG is the name of the BAM Tag to subset by.  The default is "CB".
+
+```{r}
+subsetbam(inputbam = , prefixes = , tags = list(), outputbams=c())
+
+```
+
+To peek at a few of the TAGs of interest
+
+```{r}
+peekbam(TAG="CB", n=100)
+
+```
 
 ## Appendix
 ```{r Appendix}
