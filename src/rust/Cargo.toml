@@ -21,5 +21,16 @@ csv = "1.1.6"
 flate2 = "1.0.24"
 itertools = "0.10.5"
 differ = { git = "https://github.com/scfurl/differ" }
-
+rust-htslib = "0.20"
+failure = "*"
+clap = "*"
+terminal_size = "*"
+human-panic = "1.0.1"
+simplelog = "0.5.0"
+log = "*"
+tempfile = "*"
+rayon = "*"
+ring = "0.14.6"
+data-encoding = "*"
+faccess="0.2.4"
 

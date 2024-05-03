@@ -16,5 +16,10 @@ NULL
 #' @keywords internal
 mergebams_rust_helper <- function(bams, out_path, names, prefixes) invisible(.Call(wrap__mergebams_rust_helper, bams, out_path, names, prefixes))
 
+#' peekbam_rust
+#' @export
+#' @keywords internal
+peekbam_rust_helper <- function(bam, n, tag) .Call(wrap__peekbam_rust_helper, bam, n, tag)
+
 
 # nolint end

@@ -89,8 +89,8 @@ subsetbam(inputbam = , prefixes = , tags = list(), outputbams=c())
 To peek at a few of the TAGs of interest
 
 ```{r}
-peekbam(TAG="CB", n=100)
-
+cbs = peekbam(bam = "inst/extdata/test/bam1.bam", TAG="CB", n=100)
+cbs
 ```
 
 ## Appendix
