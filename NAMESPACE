@@ -2,4 +2,5 @@
 
 export(mergebams_rust_helper)
 export(peekbam_rust_helper)
+export(subsetbam_rust_helper)
 useDynLib(mergebamsR, .registration = TRUE)

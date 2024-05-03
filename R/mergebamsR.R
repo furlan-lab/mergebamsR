@@ -37,14 +37,14 @@ mergebams<-function(bams, out_path, names=NULL, prefixes=NULL){
 
 subsetbam<-function(inputbam, tags, outputbams, prefixes = NULL, TAG="CB"){
   # if(length(inputbams)!=length(tags)) {stop("Input number of bam files is not equal to number of tags")}
-  if(length(tabs)!=length(outputbams)) {stop("Input number of output bam files is not equal to number of output bams")}
-  exists<-file.exists(bam)
+  if(length(tags)!=length(outputbams)) {stop("Input number of output bam files is not equal to number of output bams")}
+  exists<-file.exists(inputbam)
   if(is.null(prefixes)){
     prefixes<-rep("", length(outputbams))
   }
   if(length(prefixes)!=length(outputbams)) {stop("Input number of prefixes is not equal to number of output bams")}
   if(exists){
-    subsetbam_rust_helper(inputbam, tags, outputbams, prefixes)
+    subsetbam_rust_helper(inputbam = inputbam, tags = tags, outputbams = outputbams, prefixes = prefixes, tag = TAG)
   } else {
     message(paste0("File not found:\n\t", inputbam))
   }

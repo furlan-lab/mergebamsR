@@ -34,3 +34,6 @@ or if more than one BAM file is specified, the function will stop with an error.
 peekbam("example.bam", n = 10, TAG = "CB")
 
 }
+\references{
+This documentation was written by ChatGPT v4 - OpenAI, conversation with the author, 5-2-2024.
+}

@@ -21,5 +21,10 @@ mergebams_rust_helper <- function(bams, out_path, names, prefixes) invisible(.Ca
 #' @keywords internal
 peekbam_rust_helper <- function(bam, n, tag) .Call(wrap__peekbam_rust_helper, bam, n, tag)
 
+#' subsetbam_rust
+#' @export
+#' @keywords internal
+subsetbam_rust_helper <- function(inputbam, tags, outputbams, prefixes, tag) invisible(.Call(wrap__subsetbam_rust_helper, inputbam, tags, outputbams, prefixes, tag))
+
 
 # nolint end

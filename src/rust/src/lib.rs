@@ -1,5 +1,22 @@
 #![allow(non_snake_case)]
 
+
+
+extern crate clap;
+extern crate csv;
+extern crate data_encoding;
+extern crate failure;
+extern crate rayon;
+extern crate ring;
+extern crate rust_htslib;
+extern crate simplelog;
+extern crate tempfile;
+extern crate terminal_size;
+#[macro_use]
+extern crate log;
+extern crate faccess;
+extern crate human_panic;
+
 // use std::usize;
 
 // use bam::record::tags;
@@ -124,12 +141,15 @@ fn subsetbam_rust_helper(inputbam: Robj, tags: Robj, outputbams: Robj, prefixes:
                   return 
                 },
     };
-    let mut final_tags: Vec<Vec<String>> = Vec::new();
+    let mut final_tags: Vec<Vec<u8>> = Vec::new();
     let tags_unlisted = tags.as_list().unwrap();
     for (_item_str, item_robj) in tags_unlisted {
         let data = item_robj.as_string_vector().unwrap();
-        // let datain: Vec<f32> = data.iter().map(|n| *n as f32).collect();
-        final_tags.push(data);
+        for element in data {
+            let datain: Vec<u8> = element.as_bytes().to_vec();
+            final_tags.push(datain);
+        }
+        
     }
     let final_outputbams = match outputbams.as_string_vector() {
         Some(files) => files,
