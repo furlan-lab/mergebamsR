@@ -33,4 +33,16 @@
   <url>
     <loc>https://furlan-lab.github.io//reference/mergebams_rust_helper.html</loc>
   </url>
+  <url>
+    <loc>https://furlan-lab.github.io//reference/peekbam.html</loc>
+  </url>
+  <url>
+    <loc>https://furlan-lab.github.io//reference/peekbam_rust_helper.html</loc>
+  </url>
+  <url>
+    <loc>https://furlan-lab.github.io//reference/subsetbam.html</loc>
+  </url>
+  <url>
+    <loc>https://furlan-lab.github.io//reference/subsetbam_rust_helper.html</loc>
+  </url>
 </urlset>
