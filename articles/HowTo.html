@@ -182,16 +182,49 @@ use 2 cores if creating two bam files.</p>
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, outputbams <span class="op">=</span> <span class="st">"/tmp/test.bam"</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ATTGGACAGTCATGCT-1"</span>, <span class="st">"TTTACTGAGTCGATAA-1"</span><span class="op">)</span><span class="op">)</span>, cores<span class="op">=</span><span class="fl">1</span><span class="op">)</span></span></code></pre></div>
 <p>To peek at a few of the TAGs of interest</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cbs</span> <span class="op">=</span> <span class="fu"><a href="../reference/peekbam.html">peekbam</a></span><span class="op">(</span>bam <span class="op">=</span> <span class="st">"inst/extdata/test/bam1.bam"</span>, TAG<span class="op">=</span><span class="st">"CB"</span>, n<span class="op">=</span><span class="fl">100</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">cbs</span> <span class="op">=</span> <span class="fu"><a href="../reference/peekbam.html">peekbam</a></span><span class="op">(</span>bam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, TAG<span class="op">=</span><span class="st">"CB"</span>, n<span class="op">=</span><span class="fl">100</span><span class="op">)</span></span>
 <span><span class="va">cbs</span></span></code></pre></div>
-<pre><code><span><span class="co">## NULL</span></span></code></pre>
+<pre><code><span><span class="co">##   [1] "ATTGGACAGTCATGCT-1" "TTTACTGAGTCGATAA-1" "ATCATGGCAGACGCTC-1"</span></span>
+<span><span class="co">##   [4] "CACTCCATCTCGCTTG-1" "GCTGCGAGTCCGTCAG-1" "CTCTACGGTCCAGTAT-1"</span></span>
+<span><span class="co">##   [7] "TAGTTGGGTTCAGACT-1" "CAGTCCTAGCAATATG-1" "CGACCTTTCCACGTGG-1"</span></span>
+<span><span class="co">##  [10] "GGAAAGCTCTCAACTT-1" "GGACATTCAGCAGTTT-1" "GACGCGTCATCTCGCT-1"</span></span>
+<span><span class="co">##  [13] "TCGGGACGTGCTCTTC-1" "GTTCATTTCGAATCCA-1" "GTGCAGCGTACACCGC-1"</span></span>
+<span><span class="co">##  [16] "CAGTCCTTCACGGTTA-1" "GAGCAGACAGACAGGT-1" "ATGTGTGCACATGTGT-1"</span></span>
+<span><span class="co">##  [19] "TCATTACTCGGAAACG-1" "TGCGTGGAGCCATCGC-1" "GTCTCGTCACCTATCC-1"</span></span>
+<span><span class="co">##  [22] "CATTATCCATTGTGCA-1" "AAGTCTGCACAGGAGT-1" "GACCAATGTCCTCTTG-1"</span></span>
+<span><span class="co">##  [25] "TCACAAGGTGACTACT-1" "GCGAGAACAACACGCC-1" "GTAACGTCAAAGAATC-1"</span></span>
+<span><span class="co">##  [28] "AGATCTGTCATCACCC-1" "TACGGTAGTAGCTCCG-1" "TGAGCCGCACGAGGTA-1"</span></span>
+<span><span class="co">##  [31] "CGTCACTTCACCACCT-1" "CTCACACTCTAACTCT-1" "CACAAACTCACATACG-1"</span></span>
+<span><span class="co">##  [34] "CGACTTCCATTTCAGG-1" "TACTTACTCGGAATCT-1" "ACTTTCATCCCAACGG-1"</span></span>
+<span><span class="co">##  [37] "GATGAAAGTCAGAGGT-1" "AGTGTCAGTCTCTCTG-1" "CGGAGTCTCAGCTCTC-1"</span></span>
+<span><span class="co">##  [40] "ATAGACCAGTCCATAC-1" "CGAGCCACAAGAAGAG-1" "CAGGTGCCAATAGCGG-1"</span></span>
+<span><span class="co">##  [43] "AATCGGTCAGATGGCA-1" "AATCCAGAGATCGGGT-1" "ACTTACTGTGTTTGGT-1"</span></span>
+<span><span class="co">##  [46] "GGGCACTCATAAGACA-1" "CTGTGCTCAAGAGGCT-1" "GCGCCAAAGGAGCGTT-1"</span></span>
+<span><span class="co">##  [49] "CCTAAAGCAAGTCTGT-1" "GGGACCTCAGACTCGC-1" "GTAGTCACATGGTTGT-1"</span></span>
+<span><span class="co">##  [52] "AATCCAGTCAGTTAGC-1" "AACTGGTGTTGCGCAC-1" "TGACAACTCTAACTGG-1"</span></span>
+<span><span class="co">##  [55] "AACTCTTGTTGTTTGG-1" "GACCAATGTACGACCC-1" "AAAGTAGGTCCGAAGA-1"</span></span>
+<span><span class="co">##  [58] "AGTGGGAAGAGCCCAA-1" "GACGTTATCGTTTAGG-1" "TAAGAGACAAGCGAGT-1"</span></span>
+<span><span class="co">##  [61] "TAAACCGCAAGCGATG-1" "CCGGTAGGTGCGGTAA-1" "CACCAGGTCTGTGCAA-1"</span></span>
+<span><span class="co">##  [64] "GAACATCCAGTAAGCG-1" "CGACCTTTCATTTGGG-1" "AGTGAGGAGAGAGCTC-1"</span></span>
+<span><span class="co">##  [67] "ACTATCTGTGATGTCT-1" "TCGAGGCCAGATGGCA-1" "CCATGTCGTCAGGACA-1"</span></span>
+<span><span class="co">##  [70] "CCGTGGAAGACTTGAA-1" "ACTTTCAGTATAGTAG-1" "GCATACATCGGTGTCG-1"</span></span>
+<span><span class="co">##  [73] "GAACCTACAGATCTGT-1" "TGGTTAGCACACTGCG-1" "AGGGTGATCTGTGCAA-1"</span></span>
+<span><span class="co">##  [76] "GTATCTTCACTCGACG-1" "TCATTACTCATCGATG-1" "CATCAGACAACACCCG-1"</span></span>
+<span><span class="co">##  [79] "CGAACATCACCTCGGA-1" "GTGCGGTGTAAATGTG-1" "GCAGCCATCTATCGCC-1"</span></span>
+<span><span class="co">##  [82] "TACGGATGTCACAAGG-1" "TTCGGTCGTCAACTGT-1" "CAAGTTGCAGGATTGG-1"</span></span>
+<span><span class="co">##  [85] "CGCTGGAAGATATGCA-1" "GGAACTTAGTTGCAGG-1" "CGATGGCAGGTGCTTT-1"</span></span>
+<span><span class="co">##  [88] "ACCCACTTCTCCAACC-1" "GATCGATGTCTAGGTT-1" "GGTGCGTTCAGGCAAG-1"</span></span>
+<span><span class="co">##  [91] "ACAGCTACAGGGTACA-1" "CGTCTACTCGAGAACG-1" "CAGCTGGTCGAACTGT-1"</span></span>
+<span><span class="co">##  [94] "TGATTTCTCTTACCTA-1" "TGGACGCTCACTTCAT-1" "ACGCAGCGTTACGGAG-1"</span></span>
+<span><span class="co">##  [97] "TCTGAGATCCCTAATT-1" "ACTGAACGTTATTCTC-1" "ACTGATGTCGTGGTCG-1"</span></span>
+<span><span class="co">## [100] "AACCATGGTCTTGTCC-1"</span></span></code></pre>
 <p>Now we can make two bams at a time</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, outputbams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"/tmp/test1.bam"</span>, <span class="st">"/tmp/test2.bam"</span><span class="op">)</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">cbs</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">50</span><span class="op">]</span>, <span class="va">cbs</span><span class="op">[</span><span class="fl">51</span><span class="op">:</span><span class="fl">100</span><span class="op">]</span><span class="op">)</span>, cores<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <p>Note you may need to remove the files if they exst</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="st">"/tmp"</span>, full.names <span class="op">=</span> <span class="cn">T</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] TRUE TRUE TRUE</span></span></code></pre>
+<pre><code><span><span class="co">## [1] TRUE TRUE TRUE TRUE TRUE</span></span></code></pre>
 </div>
 <div class="section level2">
 <h2 id="appendix">Appendix<a class="anchor" aria-label="anchor" href="#appendix"></a>
