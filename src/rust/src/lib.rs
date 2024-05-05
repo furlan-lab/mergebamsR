@@ -81,21 +81,10 @@ fn peekbam_rust_helper(bam: Robj, n: Robj, tag: Robj) -> Robj{
                   return Robj::from(0)
                 },
     };
-    // eprintln!("n: {:?}", n);
-    // let n:u64 = match n.as_integer_vector() {
-    //     Some(n) => {
-    //                 eprintln!("n: {:?}", n[0]);
-    //                 <i32 as extendr_api::TryInto<u64>>::try_into(n[0]).unwrap()
-    //             },
-    //     None => {
-    //               eprintln!("ERROR: n is not an integer");
-    //               return Robj::from(0)
-    //             },
-    // };
     let n = match n.as_real() {
         Some(n) => n as u64,
         None => {
-                  eprintln!("ERROR: n is not ain integer");
+                  eprintln!("ERROR: n is not an integer");
                   return Robj::from(0)
                 },
         };
@@ -125,7 +114,7 @@ fn peekbam_rust_helper(bam: Robj, n: Robj, tag: Robj) -> Robj{
 /// @export
 /// @keywords internal
 #[extendr]
-fn subsetbam_rust_helper(inputbam: Robj, tags: Robj, outputbams: Robj, prefixes: Robj, tag: Robj){
+fn subsetbam_rust_helper(inputbam: Robj, tags: Robj, outputbams: Robj, prefixes: Robj, tag: Robj, cores: Robj){
     let inputbam: &str  = match inputbam.as_str_vector() {
         Some(files) => files[0],
         None => {
@@ -143,6 +132,7 @@ fn subsetbam_rust_helper(inputbam: Robj, tags: Robj, outputbams: Robj, prefixes:
     };
     let mut final_tags: Vec<Vec<u8>> = Vec::new();
     let tags_unlisted = tags.as_list().unwrap();
+    // eprintln!("{:?} tags unlisted length", tags_unlisted.len());
     for (_item_str, item_robj) in tags_unlisted {
         let data = item_robj.as_string_vector().unwrap();
         for element in data {
@@ -165,8 +155,15 @@ fn subsetbam_rust_helper(inputbam: Robj, tags: Robj, outputbams: Robj, prefixes:
                   return
                 },
     };
+    let cores = match cores.as_real() {
+        Some(n) => n as u64,
+        None => {
+                  eprintln!("ERROR: cores is not an integer");
+                  return
+                },
+        };
 
-    subsetbam::subset_bam_rust(inputbam, final_tags, final_outputbams, final_prefixes, tag);
+    subsetbam::subset_bam_rust(inputbam, final_tags, final_outputbams, final_prefixes, tag, cores);
 }
 
 

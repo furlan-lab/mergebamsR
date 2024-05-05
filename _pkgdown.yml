@@ -51,6 +51,8 @@ reference:
   desc: Main functions used in mergebamsR
   contents:
   - mergebams
+  - peekbam
+  - subsetbam
   - mergebamsR-package
 articles:
 - title: Get Started

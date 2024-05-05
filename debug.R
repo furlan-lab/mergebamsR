@@ -24,9 +24,15 @@ usethis::use_pkgdown_github_pages()
 
 mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"), out_path = "inst/extdata/test/out", prefixes = c("test1_","test2_"))
 #works
+
 cb<-peekbam(bam="inst/extdata/test/bam1.bam", n=30)
+
+unique(cb)
 #works
-subsetbam(inputbam = "inst/extdata/test/bam1.bam", outputbams = "inst/extdata/test/out/testsubset.bam", tags = list(cb))
+file.remove(list.files("~/develop/mergebamsR/inst/extdata/test/out/", full.names = T))
+
+subsetbam(inputbam = "inst/extdata/test/bam1.bam", outputbams = "inst/extdata/test/out/testsubset.bam", tags = list(c("ATTGGACAGTCATGCT-1", "TTTACTGAGTCGATAA-1")))
+subsetbam(inputbam = "inst/extdata/test/bam1.bam", outputbams = c("inst/extdata/test/out/testsubset1.bam", "inst/extdata/test/out/testsubset2.bam"), tags = list(cb[1:15], cb[16:30]), cores=2)
 
 
 mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"), 

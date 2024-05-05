@@ -20,7 +20,7 @@ remotes::install_github("furlan-lab/mergebamsR")
 
 ## How to start
 
-We have a few vignette...
+We have a vignette...
 
 - `vignette("HowTo")` to explore the basics of the package. 
 

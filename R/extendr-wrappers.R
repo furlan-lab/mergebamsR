@@ -24,7 +24,7 @@ peekbam_rust_helper <- function(bam, n, tag) .Call(wrap__peekbam_rust_helper, ba
 #' subsetbam_rust
 #' @export
 #' @keywords internal
-subsetbam_rust_helper <- function(inputbam, tags, outputbams, prefixes, tag) invisible(.Call(wrap__subsetbam_rust_helper, inputbam, tags, outputbams, prefixes, tag))
+subsetbam_rust_helper <- function(inputbam, tags, outputbams, prefixes, tag, cores) invisible(.Call(wrap__subsetbam_rust_helper, inputbam, tags, outputbams, prefixes, tag, cores))
 
 
 # nolint end

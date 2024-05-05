@@ -30,7 +30,8 @@ suppressPackageStartupMessages({
   library(mergebamsR)
 })
 
-outpath<-"/Users/sfurlan/tmp/out"
+outpath<-"/tmp"
+root<-file.path(.libPaths(), "mergebamsR/extdata/test")
 ```
 
 ## Simple merging of two bams located in test folder
@@ -47,14 +48,14 @@ mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"), o
 When merging bams from single cell data, it may be advantageous to include additional information in the cell barcode tag that reflects the merge.  In this case we are merging the two bam files but prepending the cell barcodes with the prefixes "test_1_" for the first file and "test_2_" for the second file.  The prefixes parameter must contain a character vector of prefixes of equal length to the character vector of the bams argument.
 
 ```{r}
-mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"), out_path = outpath, prefixes = c("test1_","test2_"))
+mergebams(bams = c(file.path(root, "bam1.bam"), file.path(root, "bam2.bam")), out_path = outpath, prefixes = c("test1_","test2_"))
 ```
 
 ## Filtering
 
 Finally, it may also be useful to filter bam files to include only specific reads.  mergebamsR provides this feature.  By supplying a list of character vectors containing read names to be kept, one can filter the output bam to only have reads of interest.  Again, the list length needs to be the same length as the bams character vector input.
 ```{r}
-mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"), 
+mergebams(bams = c(file.path(root, "bam1.bam"), file.path(root, "bam2.bam")), 
           out_path = outpath, 
           prefixes = c("test1_","test2_"), 
           names = list(c("VH00738:4:AAAW2TWHV:1:2512:20125:30230", "VH00738:4:AAAW2TWHV:1:1612:47827:5146"), 
@@ -64,7 +65,7 @@ mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"),
 For situations in which only certain bam files are to be filtered, include a NULL in the list for those files that are not meant to be filtered.  In the below, we filter two reads from bam1.bam and retain all reads from bam2.bam.
 
 ```{r}
-mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"), 
+mergebams(bams = c(file.path(root, "bam1.bam"), file.path(root, "bam2.bam")), 
           out_path = outpath, 
           prefixes = c("test1_","test2_"), 
           names = list(c("VH00738:4:AAAW2TWHV:1:2512:20125:30230", "VH00738:4:AAAW2TWHV:1:1612:47827:5146"), 
@@ -78,12 +79,13 @@ Although other tools already exist for subsetting bam files using shell scriptin
 2. a vector of file output names
 3. optional prefixes to be added to each TAG
 
+Note that multithreading has been implemented to split work byt the number of outputbam files created.  Therefore, for example, you should use 2 cores if creating two bam files.
+
 
 TAG is the name of the BAM Tag to subset by.  The default is "CB".
 
 ```{r}
-subsetbam(inputbam = , prefixes = , tags = list(), outputbams=c())
-
+subsetbam(inputbam = file.path(root, "bam1.bam"), outputbams = "/tmp/test.bam", tags = list(c("ATTGGACAGTCATGCT-1", "TTTACTGAGTCGATAA-1")), cores=1)
 ```
 
 To peek at a few of the TAGs of interest
@@ -92,6 +94,19 @@ To peek at a few of the TAGs of interest
 cbs = peekbam(bam = "inst/extdata/test/bam1.bam", TAG="CB", n=100)
 cbs
 ```
+
+Now we can make two bams at a time
+```{r}
+subsetbam(inputbam = file.path(root, "bam1.bam"), outputbams = c("/tmp/test1.bam", "/tmp/test2.bam"), tags = list(cbs[1:50], cbs[51:100]), cores=2)
+
+```
+
+Note you may need to remove the files if they exst
+```{r}
+file.remove(list.files("/tmp", full.names = T))
+
+```
+
 
 ## Appendix
 ```{r Appendix}

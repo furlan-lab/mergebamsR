@@ -1,4 +1,5 @@
 #![allow(unused_variables)]
+// extern crate bam;
 // use clap::{App, Arg};
 // use faccess::{AccessMode, PathExt};
 use failure::Error;
@@ -6,6 +7,12 @@ use rayon::prelude::*;
 use rust_htslib::bam;
 use rust_htslib::bam::record::Aux;
 use rust_htslib::bam::Record;
+// use rust_htslib::bam::Read;
+// use bam::record::{Aux, Record};
+// use bam::record::Aux;
+// use bam::Record;
+// use bam::BamReader;
+// use bam::BamWriter;
 use simplelog::*;
 use std::cmp;
 use std::collections::HashSet;
@@ -15,54 +22,6 @@ use std::io::{self};
 use std::path::{Path, PathBuf};
 use std::process;
 use tempfile::tempdir;
-// use terminal_size::{terminal_size, Width};
-
-// fn get_args() -> clap::App<'static, 'static> {
-//     let args = App::new("subset-bam")
-//         .set_term_width(if let Some((Width(w), _)) = terminal_size() { w as usize } else { 120 })
-//         .version("1.1.0")
-//         .author("Ian Fiddes <ian.fiddes@10xgenomics.com>, Wyatt McDonnell <wyatt.mcdonnell@10xgenomics.com>")
-//         .about("Subsetting 10x Genomics BAM files")
-//         .arg(Arg::with_name("bam")
-//              .short("b")
-//              .long("bam")
-//              .value_name("FILE")
-//              .help("Cellranger BAM file.")
-//              .required(true))
-//         .arg(Arg::with_name("cell_barcodes")
-//              .short("c")
-//              .long("cell-barcodes")
-//              .value_name("FILE")
-//              .help("File with cell barcodes to be extracted.")
-//              .required(true))
-//         .arg(Arg::with_name("out_bam")
-//              .short("o")
-//              .long("out-bam")
-//              .value_name("OUTPUT_FILE")
-//              .help("Output BAM.")
-//              .required(true))
-//         .arg(Arg::with_name("log_level")
-//              .long("log-level")
-//              .possible_values(&["info", "debug", "error"])
-//              .default_value("error")
-//              .help("Logging level."))
-//         .arg(Arg::with_name("cores")
-//              .long("cores")
-//              .default_value("1")
-//              .value_name("INTEGER")
-//              .help("Number of cores to use. If larger than 1, will write BAM subsets to temporary files before merging."))
-//         .arg(Arg::with_name("bam_tag")
-//              .long("bam-tag")
-//              .default_value("CB")
-//              .help("Change from default value (CB) to subset alignments based on alternative tags."));
-//     args
-// }
-
-// pub struct Locus {
-//     pub chrom: String,
-//     pub start: u32,
-//     pub end: u32,
-// }
 
 pub struct Metrics {
     pub total_reads: usize,
@@ -85,48 +44,23 @@ pub struct ChunkOuts {
     out_bam_file: PathBuf,
 }
 
-// fn main() {
-//     //setup_panic!();  // pretty panics for users
-//     let mut cli_args = Vec::new();
-//     for arg in std::env::args_os() {
-//         cli_args.push(arg.into_string().unwrap());
-//     }
-//     _main(cli_args);
-// }
-
-pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str) {
-    // let args = get_args().get_matches_from(cli_args);
-    // let bam_file = args.value_of("bam").expect("You must provide a BAM file");
-    // let cell_barcodes = args
-    //     .value_of("cell_barcodes")
-    //     .expect("You must provide a cell barcodes file");
-    // let out_bam_file = args
-    //     .value_of("out_bam")
-    //     .expect("You must provide a path to write the new BAM file");
-    let ll = "debug";
-    let cores = 1;
+pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str, cores: u64) {
+    let ll = "error";
     let bam_tag = tag.to_string();
     let out_bam_file = &final_outputbams[0].to_string();
-    // let cores = args
-    //     .value_of("cores")
-    //     .unwrap_or_default()
-    //     .parse::<u64>()
-    //     .expect("Failed to convert cores to integer");
-    // let bam_tag = args.value_of("bam_tag").unwrap_or_default().to_string();
-
     let ll = match ll {
         "info" => LevelFilter::Info,
         "debug" => LevelFilter::Debug,
         "error" => LevelFilter::Error,
         &_ => {
-            println!("Log level not valid");
+            eprintln!("Log level not valid");
             process::exit(1);
         }
     };
     let _ = SimpleLogger::init(ll, Config::default());
     let bam_file = inputbam;
-    // check_inputs_exist(bam_file, cell_barcodes, out_bam_file);
-    // let cell_barcodes = load_barcodes(&cell_barcodes).unwrap();
+    
+    check_inputs_exist(bam_file, out_bam_file);
     let cell_barcodes = final_tags.iter().cloned().collect();
     let tmp_dir = tempdir().unwrap();
     let virtual_offsets = bgzf_noffsets(&bam_file, &cores).unwrap();
@@ -194,74 +128,53 @@ pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbam
     );
 }
 
-// pub fn check_inputs_exist(bam_file: &str, cell_barcodes: &str, out_bam_path: &str) {
-//     for path in [bam_file, cell_barcodes].iter() {
-//         if !Path::new(&path).exists() {
-//             error!("File {} does not exist", path);
-//             process::exit(1);
-//         }
-//     }
-//     let path = Path::new(out_bam_path);
-//     if path.exists() {
-//         error!("Output path already exists");
-//         process::exit(1);
-//     }
-//     if path.is_dir() {
-//         error!("Output path is a directory");
-//         process::exit(1);
-//     }
-//     let _parent_dir = path.parent();
-//     if _parent_dir.is_none() {
-//         error!("Unable to parse directory from {}", out_bam_path);
-//         process::exit(1);
-//     }
-//     let parent_dir = _parent_dir.unwrap();
-//     if (parent_dir.to_str().unwrap().len() > 0) & !parent_dir.exists() {
-//         error!("Output directory {:?} does not exist", parent_dir);
-//         process::exit(1);
-//     }
+pub fn check_inputs_exist(bam_file: &str, out_bam_path: &str) {
+    if !Path::new(&bam_file).exists() {
+        error!("File {} does not exist", bam_file);
+        process::exit(1);
+    }
+    let path = Path::new(out_bam_path);
+    if path.exists() {
+        error!("Output path already exists");
+        process::exit(1);
+    }
+    if path.is_dir() {
+        error!("Output path is a directory");
+        process::exit(1);
+    }
+    let _parent_dir = path.parent();
+    if _parent_dir.is_none() {
+        error!("Unable to parse directory from {}", out_bam_path);
+        process::exit(1);
+    }
+    let parent_dir = _parent_dir.unwrap();
+    if (parent_dir.to_str().unwrap().len() > 0) & !parent_dir.exists() {
+        error!("Output directory {:?} does not exist", parent_dir);
+        process::exit(1);
+    }
 
-//     let extension = Path::new(bam_file).extension().unwrap().to_str().unwrap();
-//     match extension {
-//         "bam" => {
-//             let bai = bam_file.to_owned() + ".bai";
-//             if !Path::new(&bai).exists() {
-//                 error!("BAM index {} does not exist", bai);
-//                 process::exit(1);
-//             }
-//         }
-//         "cram" => {
-//             let crai = bam_file.to_owned() + ".crai";
-//             if !Path::new(&crai).exists() {
-//                 error!("CRAM index {} does not exist", crai);
-//                 process::exit(1);
-//             }
-//         }
-//         &_ => {
-//             error!("BAM file did not end in .bam or .cram. Unable to validate");
-//             process::exit(1);
-//         }
-//     }
-// }
-
-// pub fn load_barcodes(filename: impl AsRef<Path>) -> Result<HashSet<Vec<u8>>, Error> {
-//     let r = fs::File::open(filename.as_ref())?;
-//     let reader = BufReader::with_capacity(32 * 1024, r);
-
-//     let mut bc_set = HashSet::new();
-
-//     for l in reader.lines() {
-//         let seq = l?.into_bytes();
-//         bc_set.insert(seq);
-//     }
-//     let num_bcs = bc_set.len();
-//     if num_bcs == 0 {
-//         error!("Loaded 0 barcodes. Is your barcode file gzipped or empty?");
-//         process::exit(1);
-//     }
-//     debug!("Loaded {} barcodes", num_bcs);
-//     Ok(bc_set)
-// }
+    let extension = Path::new(bam_file).extension().unwrap().to_str().unwrap();
+    match extension {
+        "bam" => {
+            let bai = bam_file.to_owned() + ".bai";
+            if !Path::new(&bai).exists() {
+                error!("BAM index {} does not exist", bai);
+                process::exit(1);
+            }
+        }
+        "cram" => {
+            let crai = bam_file.to_owned() + ".crai";
+            if !Path::new(&crai).exists() {
+                error!("CRAM index {} does not exist", crai);
+                process::exit(1);
+            }
+        }
+        &_ => {
+            error!("BAM file did not end in .bam or .cram. Unable to validate");
+            process::exit(1);
+        }
+    }
+}
 
 pub fn get_cell_barcode(rec: &Record, bam_tag: &str) -> Option<Vec<u8>> {
     // println!("{:?}", rec.aux(bam_tag.as_bytes()));
@@ -272,8 +185,14 @@ pub fn get_cell_barcode(rec: &Record, bam_tag: &str) -> Option<Vec<u8>> {
         }
         _ => None,
     }
-    // rec.aux(bam_tag.as_bytes()).unwrap().to_vec()
 }
+
+// pub fn load_writer(bam: &bam::BamReader<, out_bam_path: &Path) -> Result<bam::RecordWriter, Error> {
+//     use rust_htslib::bam::Read; // collides with fs::Read
+//     let hdr = rust_htslib::bam::Header::from_template(bam.header());
+//     let out_handle = bam::RecordWriter::from_path(out_bam_path, &hdr, rust_htslib::bam::Format::Bam)?;
+//     Ok(out_handle)
+// }
 
 pub fn load_writer(bam: &bam::Reader, out_bam_path: &Path) -> Result<bam::Writer, Error> {
     use rust_htslib::bam::Read; // collides with fs::Read
@@ -408,57 +327,82 @@ pub fn merge_bams(tmp_bams: Vec<&PathBuf>, out_bam_file: &Path) {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use data_encoding::HEXUPPER;
-//     use ring::digest::{Context, Digest, SHA256};
-//     use tempfile::tempdir;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use data_encoding::HEXUPPER;
+    use ring::digest::{Context, Digest, SHA256};
+    // use tempfile::tempdir;
 
-//     /// Compute digest value for given `Reader` and print it
-//     /// This is taken from the Rust cookbook
-//     /// https://rust-lang-nursery.github.io/rust-cookbook/cryptography/hashing.html
-//     fn sha256_digest<R: Read>(mut reader: R) -> Result<Digest, Error> {
-//         let mut context = Context::new(&SHA256);
-//         let mut buffer = [0; 1024];
+    fn get_library_location()-> String  {
+        match std::env::current_exe() {
+            Ok(exe_path) => {
+                let path:String = std::env::current_exe().unwrap().to_str().unwrap().to_string();
+                let path = path.split("/src/rust/target/debug/deps").collect::<Vec<&str>>()[0];
+                let fileloc = Path::new(&path).join("inst/extdata/");
+                if fileloc.exists() {
+                    fileloc.to_str().unwrap().to_string()
+                } else {
+                    Path::new(&path).join("extdata/").to_str().unwrap().to_string()
+                }
+            },
+            Err(e) => "failed to get current exe path".to_string()
+        }
+    }
 
-//         loop {
-//             let count = reader.read(&mut buffer)?;
-//             if count == 0 {
-//                 break;
-//             }
-//             context.update(&buffer[..count]);
-//         }
+    /// Compute digest value for given `Reader` and print it
+    /// This is taken from the Rust cookbook
+    /// https://rust-lang-nursery.github.io/rust-cookbook/cryptography/hashing.html
+    fn sha256_digest<R: Read>(mut reader: R) -> Result<Digest, Error> {
+        let mut context = Context::new(&SHA256);
+        let mut buffer = [0; 1024];
 
-//         Ok(context.finish())
-//     }
+        loop {
+            let count = reader.read(&mut buffer)?;
+            if count == 0 {
+                break;
+            }
+            context.update(&buffer[..count]);
+        }
 
-//     #[test]
-//     fn test_bam_single_core() {
-//         let mut cmds = Vec::new();
-//         let tmp_dir = tempdir().unwrap();
-//         let out_file = tmp_dir.path().join("result.bam");
-//         let out_file = out_file.to_str().unwrap();
-//         for l in &[
-//             "subset-bam",
-//             "-b",
-//             "test/test.bam",
-//             "-c",
-//             "test/barcodes.csv",
-//             "-o",
-//             out_file,
-//             "--cores",
-//             "1",
-//         ] {
-//             cmds.push(l.to_string());
-//         }
-//         _main(cmds);
-//         let fh = fs::File::open(&out_file).unwrap();
-//         let d = sha256_digest(fh).unwrap();
-//         let d = HEXUPPER.encode(d.as_ref());
-//         assert_eq!(
-//             d,
-//             "65061704E9C15BFC8FECF07D1DE527AF666E7623525262334C3FDC62F366A69E"
-//         );
-//     }
-// }
+        Ok(context.finish())
+    }
+
+    #[test]
+    fn test_bam_single_core() {
+        let final_tags = vec![b"ATTGGACAGTCATGCT-1".to_vec(), b"TTTACTGAGTCGATAA-1".to_vec()];
+        let root = get_library_location();
+        let inputbam =  Path::new(&root).join("test/bam1.bam").to_str().unwrap().to_string();
+        let final_prefixes = vec!["".to_string()];
+        let final_outputbams =  Path::new(&root).join("test/out/subset.bam").to_str().unwrap().to_string();
+        let tag = "CB";
+        subset_bam_rust(&inputbam, final_tags, vec![final_outputbams.clone()], final_prefixes, tag, 1);
+        let fh = fs::File::open(Path::new(&final_outputbams)).unwrap();
+        let d = sha256_digest(fh).unwrap();
+        let d = HEXUPPER.encode(d.as_ref());
+        // eprint!("SHA256: {}\n", d);
+        assert_eq!(
+            d,
+            "9D5A7360049F4BB840D6FE2EAE0FE87B708C0816FD7F7F27A919F404D0C966E1"
+        );
+    }
+
+    #[test]
+    fn test_bam_multiple_core() {
+        let final_tags = vec![b"ATTGGACAGTCATGCT-1".to_vec(), b"TTTACTGAGTCGATAA-1".to_vec()];
+        let root = get_library_location();
+        let inputbam =  Path::new(&root).join("test/bam1.bam").to_str().unwrap().to_string();
+        let final_prefixes = vec!["".to_string()];
+        let final_outputbams =  Path::new(&root).join("test/out/subset.bam").to_str().unwrap().to_string();
+        let tag = "CB";
+        subset_bam_rust(&inputbam, final_tags, vec![final_outputbams.clone()], final_prefixes, tag, 4);
+        let fh = fs::File::open(Path::new(&final_outputbams)).unwrap();
+        let d = sha256_digest(fh).unwrap();
+        let d = HEXUPPER.encode(d.as_ref());
+        // eprint!("SHA256: {}\n", d);
+        assert_eq!(
+            d,
+            "9D5A7360049F4BB840D6FE2EAE0FE87B708C0816FD7F7F27A919F404D0C966E1"
+        );
+    }
+}

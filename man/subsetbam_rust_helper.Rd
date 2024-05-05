@@ -4,7 +4,7 @@
 \alias{subsetbam_rust_helper}
 \title{subsetbam_rust}
 \usage{
-subsetbam_rust_helper(inputbam, tags, outputbams, prefixes, tag)
+subsetbam_rust_helper(inputbam, tags, outputbams, prefixes, tag, cores)
 }
 \description{
 subsetbam_rust
