@@ -39,12 +39,78 @@ pub struct ChunkArgs<'a> {
     virtual_stop: Option<i64>,
 }
 
+pub struct BamArgs<'a> {
+    cell_barcodes: &'a HashSet<Vec<u8>>,
+    bam_file: &'a str,
+    out_dir: &'a Path,
+    bam_tag: String,
+}
+
 pub struct ChunkOuts {
     metrics: Metrics,
     out_bam_file: PathBuf,
 }
 
-pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str, cores: u64) {
+
+
+pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str) {
+    let ll = "error";
+    let bam_tag = tag.to_string();
+    let out_bam_file = &final_outputbams[0].to_string();
+    let ll = match ll {
+        "info" => LevelFilter::Info,
+        "debug" => LevelFilter::Debug,
+        "error" => LevelFilter::Error,
+        &_ => {
+            eprintln!("Log level not valid");
+            process::exit(1);
+        }
+    };
+    let _ = SimpleLogger::init(ll, Config::default());
+    let bam_file = inputbam;
+    
+    check_inputs_exist(bam_file, out_bam_file);
+    let cell_barcodes = final_tags.iter().cloned().collect();
+    let c = BamArgs {
+        cell_barcodes: &cell_barcodes,
+        bam_file: &bam_file,
+        out_dir: Path::new(out_bam_file),
+        bam_tag: bam_tag.clone(),
+    };
+
+    let results = slice_bam(&c);
+
+    // combine metrics
+    let mut metrics = Metrics {
+        total_reads: 0,
+        barcoded_reads: 0,
+        kept_reads: 0,
+    };
+
+    fn add_metrics(metrics: &mut Metrics, m: &Metrics) {
+        metrics.total_reads += m.total_reads;
+        metrics.barcoded_reads += m.barcoded_reads;
+        metrics.kept_reads += m.kept_reads;
+    }
+
+    // let mut tmp_bams = Vec::new();
+    add_metrics(&mut metrics, &results.metrics);
+
+    if metrics.kept_reads == 0 {
+        error!("Zero alignments were kept. Does your BAM contain the cell barcodes and/or tag you chose?");
+        process::exit(2);
+    }
+
+    info!("Done!");
+    info!(
+        "Visited {} alignments, found {} with barcodes and kept {}",
+        metrics.total_reads, metrics.barcoded_reads, metrics.kept_reads
+    );
+}
+
+
+
+pub fn subset_bam_rust_parallel(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str, cores: u64) {
     let ll = "error";
     let bam_tag = tag.to_string();
     let out_bam_file = &final_outputbams[0].to_string();
@@ -314,6 +380,40 @@ pub fn slice_bam_chunk(args: &ChunkArgs) -> ChunkOuts {
     r
 }
 
+
+
+pub fn slice_bam(args: &BamArgs) -> ChunkOuts {
+    use crate::rust_htslib::bam::Read;
+    let mut bam = bam::Reader::from_path(args.bam_file).unwrap();
+    // let out_bam_file = args.out_dir.join(format!("{}.bam", args.i));
+    let mut out_bam = load_writer(&bam, &args.out_dir).unwrap();
+    let mut metrics = Metrics {
+        total_reads: 0,
+        barcoded_reads: 0,
+        kept_reads: 0,
+    };
+    for r in bam.records(){
+        let rec = r.unwrap();
+        metrics.total_reads += 1;
+        let barcode = get_cell_barcode(&rec, &args.bam_tag);
+        if barcode.is_some() {
+            metrics.barcoded_reads += 1;
+            let barcode = barcode.unwrap();
+            if args.cell_barcodes.contains(&barcode) {
+                metrics.kept_reads += 1;
+                out_bam.write(&rec).unwrap();
+            }
+        }
+    }
+    let r = ChunkOuts {
+        metrics: metrics,
+        out_bam_file: args.out_dir.to_path_buf(),
+    };
+    r
+}
+
+
+
 pub fn merge_bams(tmp_bams: Vec<&PathBuf>, out_bam_file: &Path) {
     use rust_htslib::bam::Read; // collides with fs::Read
     let bam = bam::Reader::from_path(tmp_bams[0]).unwrap();
@@ -376,7 +476,7 @@ mod tests {
         let final_prefixes = vec!["".to_string()];
         let final_outputbams =  Path::new(&root).join("test/out/subset.bam").to_str().unwrap().to_string();
         let tag = "CB";
-        subset_bam_rust(&inputbam, final_tags, vec![final_outputbams.clone()], final_prefixes, tag, 1);
+        subset_bam_rust(&inputbam, final_tags, vec![final_outputbams.clone()], final_prefixes, tag);
         let fh = fs::File::open(Path::new(&final_outputbams)).unwrap();
         let d = sha256_digest(fh).unwrap();
         let d = HEXUPPER.encode(d.as_ref());
@@ -395,7 +495,7 @@ mod tests {
         let final_prefixes = vec!["".to_string()];
         let final_outputbams =  Path::new(&root).join("test/out/subset.bam").to_str().unwrap().to_string();
         let tag = "CB";
-        subset_bam_rust(&inputbam, final_tags, vec![final_outputbams.clone()], final_prefixes, tag, 4);
+        subset_bam_rust_parallel(&inputbam, final_tags, vec![final_outputbams.clone()], final_prefixes, tag, 4);
         let fh = fs::File::open(Path::new(&final_outputbams)).unwrap();
         let d = sha256_digest(fh).unwrap();
         let d = HEXUPPER.encode(d.as_ref());

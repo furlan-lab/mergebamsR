@@ -91,7 +91,7 @@ subsetbam(inputbam = file.path(root, "bam1.bam"), outputbams = "/tmp/test.bam", 
 To peek at a few of the TAGs of interest
 
 ```{r}
-cbs = peekbam(bam = "inst/extdata/test/bam1.bam", TAG="CB", n=100)
+cbs = peekbam(bam = file.path(root, "bam1.bam"), TAG="CB", n=100)
 cbs
 ```
 

@@ -162,8 +162,12 @@ fn subsetbam_rust_helper(inputbam: Robj, tags: Robj, outputbams: Robj, prefixes:
                   return
                 },
         };
-
-    subsetbam::subset_bam_rust(inputbam, final_tags, final_outputbams, final_prefixes, tag, cores);
+    if cores>1{
+        subsetbam::subset_bam_rust_parallel(inputbam, final_tags, final_outputbams, final_prefixes, tag, cores);
+    } else {
+        subsetbam::subset_bam_rust(inputbam, final_tags, final_outputbams, final_prefixes, tag);
+    }
+    
 }
 
 
