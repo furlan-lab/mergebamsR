@@ -25,7 +25,8 @@ usethis::use_pkgdown_github_pages()
 mergebams(bams = c("inst/extdata/test/bam1.bam","inst/extdata/test/bam2.bam"), out_path = "inst/extdata/test/out", prefixes = c("test1_","test2_"))
 #works
 
-cb<-peekbam(bam="inst/extdata/test/bam1.bam", n=30)
+cb<-peekbam(bam="inst/extdata/test/bam1.bam", n=3000)
+
 
 unique(cb)
 #works

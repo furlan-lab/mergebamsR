@@ -12,7 +12,6 @@ extern crate rust_htslib;
 extern crate simplelog;
 extern crate tempfile;
 extern crate terminal_size;
-#[macro_use]
 extern crate log;
 extern crate faccess;
 extern crate human_panic;
@@ -162,11 +161,12 @@ fn subsetbam_rust_helper(inputbam: Robj, tags: Robj, outputbams: Robj, prefixes:
                   return
                 },
         };
-    if cores>1{
-        subsetbam::subset_bam_rust_parallel(inputbam, final_tags, final_outputbams, final_prefixes, tag, cores);
-    } else {
-        subsetbam::subset_bam_rust(inputbam, final_tags, final_outputbams, final_prefixes, tag);
-    }
+    // if cores>1{
+    //     subsetbam::subset_bam_rust_parallel(inputbam, final_tags, final_outputbams, final_prefixes, tag, cores);
+    // } else {
+    //     subsetbam::subset_bam_rust(inputbam, final_tags, final_outputbams, final_prefixes, tag);
+    // }
+    subsetbam::subset_bam_rust_parallel(inputbam, final_tags, final_outputbams, final_prefixes, tag, cores);
     
 }
 
