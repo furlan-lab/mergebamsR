@@ -4,6 +4,7 @@
 // use faccess::{AccessMode, PathExt};
 use failure::Error;
 use rayon::prelude::*;
+// use rayon::range;
 use rust_htslib::bam;
 use rust_htslib::bam::record::Aux;
 use rust_htslib::bam::Record;
@@ -146,6 +147,7 @@ pub fn subset_bam_rust_parallel(inputbam: &str, final_tags: Vec<Vec<u8>>, final_
     };
     let _ = SimpleLogger::init(ll, Config::default());
     let bam_file = inputbam;
+    let outputbam_no = final_outputbams.len();
     
     // check_inputs_exist(bam_file, out_bam_file);
     // let cell_barcodes = final_tags.iter().cloned().collect();
@@ -196,10 +198,10 @@ pub fn subset_bam_rust_parallel(inputbam: &str, final_tags: Vec<Vec<u8>>, final_
         metrics.kept_reads += m.kept_reads;
     }
 
-    let mut tmp_bams = Vec::new();
+    let mut tmp_bams_vec = Vec::new();
     for c in results.iter() {
             add_metrics(&mut metrics, &c.metrics);
-            tmp_bams.push(&c.out_paths);
+            tmp_bams_vec.push(&c.out_paths);
     }
 
     // if metrics.kept_reads == 0 {
@@ -208,14 +210,30 @@ pub fn subset_bam_rust_parallel(inputbam: &str, final_tags: Vec<Vec<u8>>, final_
     // }
 
     // just copy the temp file over
-    for out_bam_file in final_outputbams{
-        if cores == 1 {
-            fs::copy(tmp_bams[0], out_bam_file).unwrap();
-        } else {
-            info!("Merging {} BAM chunks into final output", cores);
-            merge_bams(tmp_bams.clone(), Path::new(&out_bam_file));
+
+    if cores == 1 {
+        for i in 0..outputbam_no {
+            let filefrom = &tmp_bams_vec[0][i];
+            let fileto = &final_outputbams[i];
+            fs::copy(filefrom, fileto).unwrap();
+        }
+    } else {
+        for tmp_bams in tmp_bams_vec {
+            for i in 0..outputbam_no {
+                let filefrom = &tmp_bams[i];
+                let fileto = &final_outputbams[i];
+                fs::copy(filefrom, fileto).unwrap();
+            }
         }
     }
+
+
+        // if cores == 1 {
+        //     fs::copy(tmp_bams[0], out_bam_file).unwrap();
+        // } else {
+        //     info!("Merging {} BAM chunks into final output", cores);
+        //     merge_bams(tmp_bams.clone(), Path::new(&out_bam_file));
+        // }
 
 
     info!("Done!");
@@ -415,10 +433,10 @@ pub fn slice_bam_chunk(args: &ChunkArgs) -> ChunkOuts {
             // }
         }
     }
-    let mut out_paths: Vec<_> = vec![];
-
+    let mut out_paths: Vec<PathBuf> = vec![];
     for out_bam_file in out_bam_files{
-        out_paths.push();
+        // let mut path = PathBuf::new();
+        out_paths.push(PathBuf::from(out_bam_file));
     }
     let r = ChunkOuts {
         metrics: metrics,
