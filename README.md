@@ -1,6 +1,6 @@
 # mergebamsR
 
-version 0.0.3
+version 0.0.4
 
 <p align="center"><img src="man/figures/mergebamsR.png" alt="" width="500"></a></p>
 <hr>

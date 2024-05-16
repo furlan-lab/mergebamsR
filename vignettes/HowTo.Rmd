@@ -110,12 +110,31 @@ file.remove(list.files("/tmp", full.names = T))
 ## working on larger bam files
 
 Note that this bam file is too big to be included in the test.  You will want to use your own
-First, we determined that there are X aligned 
-```{r}
-bigbam<-"/Users/sfurlan/Desktop/merged_bams/geno_recipient.bam"
-cbs<-peekbam(bam)
-subsetbam(inputbam = bigbam, outputbams = c("/Users/sfurlan/Desktop/bam1.bam", "/Users/sfurlan/Desktop/bam1.bam"), tags = list(cbs[1:50], cbs[51:100]), cores=2)
+First, we determined that there are 31920074 reads total.
+Second, we can plot the number of reads per barcode
+Third, we can select only barcodes that have > 10000 reads and less than 60000 and put them into a "middle.bam" and all other reads in the "extremes.bam"
 
+We can potentially speed things up by chunking the bam across cores and doing the work that way (the default is to write each output bam with each core).  An example is shown below.
+
+```{r}
+bigbam<-"/Users/sfurlan/Desktop/merged_bams/geno_recipient_HSC.bam"
+bigbam<-"/Users/sfurlan/Desktop/merged_bams/geno_recipient.bam"
+cbs<-peekbam(bigbam, n = 31920074)
+cbs<-peekbam(bigbam, n = 1045596)
+dat<-table(cbs)
+library(ggplot2)
+ggplot(data.frame(nreads=log10(as.numeric(dat))), aes(x=nreads))+geom_density()+theme_bw()
+mid<-names(dat)[dat>10000 & dat < 60000]
+ext<-names(dat)[!(dat>10000 & dat < 60000)]
+any(mid %in% ext)
+any(ext %in% mid)
+
+library(microbenchmark)
+
+twocores<-microbenchmark(subsetbam(inputbam = bigbam, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), tags = list(mid, ext), cores=2))
+
+
+eightcores<-microbenchmark(subsetbam(inputbam = bigbam, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), tags = list(mid, ext), cores=8, split_bam = T))
 ```
 
 

@@ -5,3 +5,7 @@
 # mergebamsR v0.0.3
 
 * new features - subsetbam
+
+# mergebamsR v0.0.4
+
+* subset bam with better parallel processing

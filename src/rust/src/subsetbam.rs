@@ -232,8 +232,8 @@ pub fn subset_bam_rust_split(inputbam: &str, final_tags: Vec<Vec<u8>>, final_out
             fs::copy(filefrom, fileto).unwrap();
         }
     } else {
-        // eprintln!("Tmp bams: {:?}", tmp_bams_vec);
-        // eprintln!("Final bams: {:?}", final_outputbams);
+        eprintln!("Tmp bams: {:?}", tmp_bams_vec);
+        eprintln!("Final bams: {:?}", final_outputbams);
         for tmp_bams in tmp_bams_vec.into_iter().enumerate() {
             merge_bams(&tmp_bams.1, Path::new(&final_outputbams[tmp_bams.0]));
         }
