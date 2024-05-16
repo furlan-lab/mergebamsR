@@ -4,6 +4,7 @@
 // use faccess::{AccessMode, PathExt};
 use failure::Error;
 use rayon::prelude::*;
+// use ring::test;
 // use rayon::range;
 use rust_htslib::bam;
 use rust_htslib::bam::record::Aux;
@@ -64,7 +65,7 @@ pub struct BamArgs<'a> {
 
 pub struct BamOuts {
     metrics: Metrics,
-    out_bam_file: PathBuf,
+    // out_bam_file: PathBuf,
 }
 
 pub struct ChunkOuts {
@@ -74,7 +75,7 @@ pub struct ChunkOuts {
 
 
 pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str) {
-    let ll = "error";
+    let ll = "info";
     let bam_tag = tag.to_string();
     let out_bam_file = &final_outputbams[0].to_string();
     let ll = match ll {
@@ -129,11 +130,20 @@ pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbam
 }
 
 
+fn transpose_vec<T>(v: Vec<&Vec<T>>) -> Vec<Vec<T>>
+where
+    T: Clone,
+{
+    assert!(!v.is_empty());
+    (0..v[0].len())
+        .map(|i| v.iter().map(|inner| inner[i].clone()).collect::<Vec<T>>())
+        .collect()
+}
 
-pub fn subset_bam_rust_parallel(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str, cores: u64) {
+pub fn subset_bam_rust_split(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str, cores: u64) {
     
     // use std::collections::HashMap;
-    let ll = "error";
+    let ll = "info";
     let bam_tag = tag.to_string();
     // let out_bam_file = &final_outputbams[0].to_string();
     let ll = match ll {
@@ -148,7 +158,11 @@ pub fn subset_bam_rust_parallel(inputbam: &str, final_tags: Vec<Vec<u8>>, final_
     let _ = SimpleLogger::init(ll, Config::default());
     let bam_file = inputbam;
     let outputbam_no = final_outputbams.len();
-    
+    // let out_dir = Path::new(&get_library_location()).join("test/out");
+    // fs::create_dir(&out_dir).unwrap();
+    // let tmp_dir = out_dir.join("tmp");
+    // fs::create_dir(&tmp_dir).unwrap();
+
     check_inputs_exist(bam_file, final_outputbams.clone());
     // let cell_barcodes = final_tags.iter().cloned().collect();
     let tmp_dir = tempdir().unwrap();
@@ -210,6 +224,7 @@ pub fn subset_bam_rust_parallel(inputbam: &str, final_tags: Vec<Vec<u8>>, final_
     }
 
     // just copy the temp file over
+    let tmp_bams_vec = transpose_vec(tmp_bams_vec);
 
     if cores == 1 {
         for i in 0..outputbam_no {
@@ -218,13 +233,16 @@ pub fn subset_bam_rust_parallel(inputbam: &str, final_tags: Vec<Vec<u8>>, final_
             fs::copy(filefrom, fileto).unwrap();
         }
     } else {
-        for tmp_bams in tmp_bams_vec {
-            for i in 0..outputbam_no {
-                // let filefrom = &tmp_bams[i];
-                // let fileto = &final_outputbams[i];
-                merge_bams(tmp_bams, Path::new(&final_outputbams[i]))
-                // fs::copy(filefrom, fileto).unwrap();
-            }
+        // eprintln!("Tmp bams: {:?}", tmp_bams_vec);
+        // eprintln!("Final bams: {:?}", final_outputbams);
+        for tmp_bams in tmp_bams_vec.into_iter().enumerate() {
+            merge_bams(&tmp_bams.1, Path::new(&final_outputbams[tmp_bams.0]));
+            // for i in 0..outputbam_no {
+            //     // let filefrom = &tmp_bams[i];
+            //     // let fileto = &final_outputbams[i];
+            //     merge_bams(&tmp_bams, Path::new(&final_outputbams[i]))
+            //     // fs::copy(filefrom, fileto).unwrap();
+            // }
         }
     }
 
@@ -465,7 +483,7 @@ pub fn slice_bam(args: &BamArgs) -> BamOuts {
     }
     let r = BamOuts {
         metrics: metrics,
-        out_bam_file: args.out_dir.to_path_buf(),
+        // out_bam_file: args.out_dir.to_path_buf(),
     };
     r
 }
@@ -473,6 +491,8 @@ pub fn slice_bam(args: &BamArgs) -> BamOuts {
 
 
 pub fn merge_bams(tmp_bams: &Vec<PathBuf>, out_bam_file: &Path) {
+    // eprintln!("Merging tmp_bams: {:?}", tmp_bams);
+    // eprintln!("Into out_bam_file: {:?}", out_bam_file);
     use rust_htslib::bam::Read; // collides with fs::Read
     let first_string = tmp_bams[0].to_str().unwrap();
     let bam = bam::Reader::from_path(first_string).unwrap();
@@ -486,6 +506,8 @@ pub fn merge_bams(tmp_bams: &Vec<PathBuf>, out_bam_file: &Path) {
     }
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -493,7 +515,7 @@ mod tests {
     use ring::digest::{Context, Digest, SHA256};
     // use tempfile::tempdir;
 
-    fn get_library_location()-> String  {
+    pub fn get_library_location()-> String  {
         match std::env::current_exe() {
             Ok(exe_path) => {
                 let path:String = std::env::current_exe().unwrap().to_str().unwrap().to_string();
@@ -508,7 +530,6 @@ mod tests {
             Err(e) => "failed to get current exe path".to_string()
         }
     }
-
     /// Compute digest value for given `Reader` and print it
     /// This is taken from the Rust cookbook
     /// https://rust-lang-nursery.github.io/rust-cookbook/cryptography/hashing.html
@@ -531,6 +552,8 @@ mod tests {
     fn test_bam_single_core() {
         let final_tags = vec![b"ATTGGACAGTCATGCT-1".to_vec()];
         let root = get_library_location();
+        let out_dir = Path::new(&root).join("test/out");
+        fs::create_dir(&out_dir).unwrap();
         let inputbam =  Path::new(&root).join("test/bam1.bam").to_str().unwrap().to_string();
         let final_prefixes = vec!["".to_string()];
         // let final_outputbams =  Path::new(&root).join("test/out/subset.bam").to_str().unwrap().to_string();
@@ -546,26 +569,37 @@ mod tests {
             d,
             "253734E57D69F17E7557B3EC20E64BB5801B3D15889E45CC4F39E451D172DDE8"
         );
+        fs::remove_dir_all(out_dir).unwrap();   
     }
 
     #[test]
     fn test_bam_multiple_core() {
         let final_tags = vec![b"ATTGGACAGTCATGCT-1".to_vec(), b"TTTACTGAGTCGATAA-1".to_vec()];
         let root = get_library_location();
+        let out_dir = Path::new(&root).join("test/out");
+        fs::create_dir(&out_dir).unwrap();
         let inputbam =  Path::new(&root).join("test/bam1.bam").to_str().unwrap().to_string();
         let final_prefixes = vec!["".to_string()];
         let final_outputbams1 =  Path::new(&root).join("test/out/subset1.bam").to_str().unwrap().to_string();
         let final_outputbams2 =  Path::new(&root).join("test/out/subset2.bam").to_str().unwrap().to_string();
         let tag = "CB";
-        subset_bam_rust_parallel(&inputbam, final_tags, vec![final_outputbams1.clone(), final_outputbams2.clone()], final_prefixes, tag, 4);
+        subset_bam_rust_split(&inputbam, final_tags, vec![final_outputbams1.clone(), final_outputbams2.clone()], final_prefixes, tag, 8);
         let fh = fs::File::open(Path::new(&final_outputbams2)).unwrap();
         let d = sha256_digest(fh).unwrap();
         let d = HEXUPPER.encode(d.as_ref());
         // eprint!("SHA256: {}\n", d);
         assert_eq!(
             d,
-            "E40B6FD1AA0FA3913FC3478C51E7FA1240CEFA6CE32A604585366458AA7DC7F1"
+            "995674425D26FC12280768FEE2186D7FD165FCDAFE7D849E7A150A881727BABC"
         );
+        let fh = fs::File::open(Path::new(&final_outputbams1)).unwrap();
+        let d = sha256_digest(fh).unwrap();
+        let d = HEXUPPER.encode(d.as_ref());
+        assert_eq!(
+            d,
+            "253734E57D69F17E7557B3EC20E64BB5801B3D15889E45CC4F39E451D172DDE8"
+        );
+        fs::remove_dir_all(out_dir).unwrap();  
     }
 
     #[test]
