@@ -69,7 +69,7 @@ mergebams<-function(bams, out_path, names=NULL, prefixes=NULL){
 #' If any of these conditions is not met, the function will stop and throw an error.
 #' @export
 
-subsetbam<-function(inputbam, tags, outputbams, prefixes = NULL, TAG="CB", cores=1, verbose=F, split bam=F){
+subsetbam<-function(inputbam, tags, outputbams, prefixes = NULL, TAG="CB", cores=1, verbose=F, split_bam=F){
   # if(length(inputbams)!=length(tags)) {stop("Input number of bam files is not equal to number of tags")}
   if(length(tags)!=length(outputbams)) {stop("Input number of output bam files is not equal to number of output bams")}
   exists<-file.exists(inputbam)

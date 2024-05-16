@@ -1,7 +1,7 @@
 ---
 title: "How to use mergebamsR"
 output: html_document
-date: "2024-03-17"
+date: "2024-05-16"
 always_allow_html: true
 editor_options: 
   chunk_output_type: console
@@ -104,6 +104,17 @@ subsetbam(inputbam = file.path(root, "bam1.bam"), outputbams = c("/tmp/test1.bam
 Note you may need to remove the files if they exst
 ```{r}
 file.remove(list.files("/tmp", full.names = T))
+
+```
+
+## working on larger bam files
+
+Note that this bam file is too big to be included in the test.  You will want to use your own
+First, we determined that there are X aligned 
+```{r}
+bigbam<-"/Users/sfurlan/Desktop/merged_bams/geno_recipient.bam"
+cbs<-peekbam(bam)
+subsetbam(inputbam = bigbam, outputbams = c("/Users/sfurlan/Desktop/bam1.bam", "/Users/sfurlan/Desktop/bam1.bam"), tags = list(cbs[1:50], cbs[51:100]), cores=2)
 
 ```
 
