@@ -223,7 +223,6 @@ pub fn subset_bam_rust_split(inputbam: &str, final_tags: Vec<Vec<u8>>, final_out
         process::exit(2);
     }
 
-    // just copy the temp file over
     let tmp_bams_vec = transpose_vec(tmp_bams_vec);
 
     if cores == 1 {
@@ -237,12 +236,6 @@ pub fn subset_bam_rust_split(inputbam: &str, final_tags: Vec<Vec<u8>>, final_out
         // eprintln!("Final bams: {:?}", final_outputbams);
         for tmp_bams in tmp_bams_vec.into_iter().enumerate() {
             merge_bams(&tmp_bams.1, Path::new(&final_outputbams[tmp_bams.0]));
-            // for i in 0..outputbam_no {
-            //     // let filefrom = &tmp_bams[i];
-            //     // let fileto = &final_outputbams[i];
-            //     merge_bams(&tmp_bams, Path::new(&final_outputbams[i]))
-            //     // fs::copy(filefrom, fileto).unwrap();
-            // }
         }
     }
 
@@ -435,21 +428,11 @@ pub fn slice_bam_chunk(args: &ChunkArgs) -> ChunkOuts {
                                     }
                 None => continue
             }
-            // if args.cell_barcodes.contains(&barcode) {
-            //     metrics.kept_reads += 1;
-            //     out_bam.write(&rec).unwrap();
-            // }
         }
     }
-    // let mut out_paths: Vec<PathBuf> = vec![];
-    // for out_bam_file in tmp_out_bam_files{
-    //     // let mut path = PathBuf::new();
-    //     out_paths.push(PathBuf::from(out_bam_file));
-    // }
+
     let r = ChunkOuts {
         metrics: metrics,
-        // out_bam_file: Path::new(&out_bam_file).to_path_buf(),
-        // out_bam_file: Path::new(&out_bam_file).to_path_buf(),
         out_paths: tmp_out_bam_files.clone(),
     };
     info!("Chunk {} is done", args.i);
@@ -461,7 +444,6 @@ pub fn slice_bam_chunk(args: &ChunkArgs) -> ChunkOuts {
 pub fn slice_bam(args: &BamArgs) -> BamOuts {
     use crate::rust_htslib::bam::Read;
     let mut bam = bam::Reader::from_path(args.bam_file).unwrap();
-    // let out_bam_file = args.out_dir.join(format!("{}.bam", args.i));
     let mut out_bam = load_writer(&bam, &args.out_dir).unwrap();
     let mut metrics = Metrics {
         total_reads: 0,
@@ -483,7 +465,6 @@ pub fn slice_bam(args: &BamArgs) -> BamOuts {
     }
     let r = BamOuts {
         metrics: metrics,
-        // out_bam_file: args.out_dir.to_path_buf(),
     };
     r
 }
@@ -493,7 +474,8 @@ pub fn slice_bam(args: &BamArgs) -> BamOuts {
 pub fn merge_bams(tmp_bams: &Vec<PathBuf>, out_bam_file: &Path) {
     // eprintln!("Merging tmp_bams: {:?}", tmp_bams);
     // eprintln!("Into out_bam_file: {:?}", out_bam_file);
-    use rust_htslib::bam::Read; // collides with fs::Read
+    // use rust_htslib::bam::Read; // collides with fs::Read
+    use bam::Read;
     let first_string = tmp_bams[0].to_str().unwrap();
     let bam = bam::Reader::from_path(first_string).unwrap();
     let mut out_bam = load_writer(&bam, out_bam_file).unwrap();

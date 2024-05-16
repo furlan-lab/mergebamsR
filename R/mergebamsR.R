@@ -69,7 +69,7 @@ mergebams<-function(bams, out_path, names=NULL, prefixes=NULL){
 #' If any of these conditions is not met, the function will stop and throw an error.
 #' @export
 
-subsetbam<-function(inputbam, tags, outputbams, prefixes = NULL, TAG="CB", cores=1, verbose=F){
+subsetbam<-function(inputbam, tags, outputbams, prefixes = NULL, TAG="CB", cores=1, verbose=F, split bam=F){
   # if(length(inputbams)!=length(tags)) {stop("Input number of bam files is not equal to number of tags")}
   if(length(tags)!=length(outputbams)) {stop("Input number of output bam files is not equal to number of output bams")}
   exists<-file.exists(inputbam)
@@ -89,12 +89,19 @@ subsetbam<-function(inputbam, tags, outputbams, prefixes = NULL, TAG="CB", cores
   if(length(prefixes)!=length(outputbams)) {stop("Input number of prefixes is not equal to number of output bams")}
   if(any(sapply(outputbams, file.exists))) {stop("One of the outputbam file exists.  Remove it and rerun subsetbam")}
   if(exists){
-    if(verbose){
-      message(paste0("Running subset_bam using TAG = ", TAG, "with ", cores, " core(s)"))
+    if(split_bam){
+      if(verbose){
+        message(paste0("Running subset_bam using TAG = ", TAG, " splitting the bam across ", cores, " core(s)"))
+      }
+      subsetbam_rust_helper(inputbam = inputbam, tags = tags, outputbams = outputbams, prefixes = prefixes, tag = TAG, cores=cores)
+    } else {
+      if(verbose){
+        message(paste0("Running subset_bam using TAG = ", TAG, " distributing barcode subsetting across ", cores, " core(s)"))
+      }
+      nc<-pbmcapply::pbmclapply(1:length(tags), function(i){
+        subsetbam_rust_helper(inputbam = inputbam, tags = tags[i], outputbams = outputbams[i], prefixes = prefixes[i], tag = TAG, cores = 1)
+      }, mc.cores = cores)
     }
-    nc<-pbmcapply::pbmclapply(1:length(tags), function(i){
-      subsetbam_rust_helper(inputbam = inputbam, tags = tags[i], outputbams = outputbams[i], prefixes = prefixes[i], tag = TAG, cores = 1)
-    }, mc.cores = cores)
   } else {
     message(paste0("File not found:\n\t", inputbam))
   }
