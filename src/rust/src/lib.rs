@@ -129,16 +129,18 @@ fn subsetbam_rust_helper(inputbam: Robj, tags: Robj, outputbams: Robj, prefixes:
                   return 
                 },
     };
-    let mut final_tags: Vec<Vec<u8>> = Vec::new();
+
+    let mut final_tags: Vec<Vec<Vec<u8>>> = Vec::new();
     let tags_unlisted = tags.as_list().unwrap();
     // eprintln!("{:?} tags unlisted length", tags_unlisted.len());
     for (_item_str, item_robj) in tags_unlisted {
+        let mut int_vec: Vec<Vec<u8>> = Vec::new();
         let data = item_robj.as_string_vector().unwrap();
         for element in data {
             let datain: Vec<u8> = element.as_bytes().to_vec();
-            final_tags.push(datain);
+            int_vec.push(datain);
         }
-        
+        final_tags.push(int_vec);
     }
     let final_outputbams = match outputbams.as_string_vector() {
         Some(files) => files,

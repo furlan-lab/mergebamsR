@@ -48,6 +48,7 @@ pub struct Metrics {
 
 pub struct ChunkArgs<'a> {
     cell_barcodes: &'a HashMap<&'a Vec<u8>, usize>,
+    outputbam_no: usize,
     i: usize,
     bam_file: &'a str,
     tmp_dir: &'a Path,
@@ -74,7 +75,7 @@ pub struct ChunkOuts {
 }
 
 
-pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str) {
+pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<Vec<u8>>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str) {
     let ll = "info";
     let bam_tag = tag.to_string();
     let out_bam_file = &final_outputbams[0].to_string();
@@ -91,7 +92,7 @@ pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbam
     let bam_file = inputbam;
     
     check_inputs_exist(bam_file, vec![out_bam_file.clone()]);
-    let cell_barcodes = final_tags.iter().cloned().collect();
+    let cell_barcodes = final_tags[0].iter().cloned().collect();
     let c = BamArgs {
         cell_barcodes: &cell_barcodes,
         bam_file: &bam_file,
@@ -140,7 +141,7 @@ where
         .collect()
 }
 
-pub fn subset_bam_rust_split(inputbam: &str, final_tags: Vec<Vec<u8>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str, cores: u64) {
+pub fn subset_bam_rust_split(inputbam: &str, final_tags: Vec<Vec<Vec<u8>>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str, cores: u64) {
     
     // use std::collections::HashMap;
     let ll = "info";
@@ -169,14 +170,17 @@ pub fn subset_bam_rust_split(inputbam: &str, final_tags: Vec<Vec<u8>>, final_out
 
     let virtual_offsets = bgzf_noffsets(&bam_file, &cores).unwrap();
     let mut cell_barcodes = HashMap::new();
-    for vec in final_tags.iter().enumerate(){
-        cell_barcodes.insert(vec.1, vec.0);
+    for (index, vec) in final_tags.iter().enumerate(){
+        for cb in vec.iter(){
+            cell_barcodes.insert(cb, index);
+        }
     }
     // eprintln!("{:?}", cell_barcodes);
     let mut chunks = Vec::new();
     for (i, (virtual_start, virtual_stop)) in virtual_offsets.iter().enumerate() {
         let c = ChunkArgs {
             cell_barcodes: &cell_barcodes,
+            outputbam_no: outputbam_no,
             i: i,
             bam_file: bam_file,
             // tmp_dir: final_outputbams.clone(),
@@ -232,8 +236,8 @@ pub fn subset_bam_rust_split(inputbam: &str, final_tags: Vec<Vec<u8>>, final_out
             fs::copy(filefrom, fileto).unwrap();
         }
     } else {
-        eprintln!("Tmp bams: {:?}", tmp_bams_vec);
-        eprintln!("Final bams: {:?}", final_outputbams);
+        // eprintln!("Tmp bams: {:?}", tmp_bams_vec);
+        // eprintln!("Final bams: {:?}", final_outputbams);
         for tmp_bams in tmp_bams_vec.into_iter().enumerate() {
             merge_bams(&tmp_bams.1, Path::new(&final_outputbams[tmp_bams.0]));
         }
@@ -402,7 +406,7 @@ pub fn slice_bam_chunk(args: &ChunkArgs) -> ChunkOuts {
     let mut bam = bam::Reader::from_path(args.bam_file).unwrap();
     let tmpdir = &args.tmp_dir;
     let mut out_writers: Vec<bam::Writer> =  vec![];
-    let tmp_out_bam_files: Vec<_> = (0..args.cell_barcodes.len()).into_iter().map(|x| tmpdir.join(format!("tmp_chunk{}_out{}.bam", args.i, x))).collect();
+    let tmp_out_bam_files: Vec<_> = (0..args.outputbam_no).into_iter().map(|x| tmpdir.join(format!("tmp_chunk{}_out{}.bam", args.i, x))).collect();
     // eprintln!("{:?}", tmp_out_bam_files.clone());
     for tmp_out_bam_file in &tmp_out_bam_files{
         out_writers.push(load_writer(&bam, Path::new(&tmp_out_bam_file)).unwrap());
@@ -532,7 +536,7 @@ mod tests {
 
     #[test]
     fn test_bam_single_core() {
-        let final_tags = vec![b"ATTGGACAGTCATGCT-1".to_vec()];
+        let final_tags = vec![vec![b"ATTGGACAGTCATGCT-1".to_vec(), b"ATCATGGCAGACGCTC-1".to_vec()]];
         let root = get_library_location();
         let out_dir = Path::new(&root).join("test/out");
         fs::create_dir(&out_dir).unwrap();
@@ -549,14 +553,15 @@ mod tests {
         // eprint!("SHA256: {}\n", d);
         assert_eq!(
             d,
-            "253734E57D69F17E7557B3EC20E64BB5801B3D15889E45CC4F39E451D172DDE8"
+            "43F97A078D9860A4D083019919B17CDD05102C71467B223DF201E03B28AB14AD"
         );
         fs::remove_dir_all(out_dir).unwrap();   
     }
 
     #[test]
     fn test_bam_multiple_core() {
-        let final_tags = vec![b"ATTGGACAGTCATGCT-1".to_vec(), b"TTTACTGAGTCGATAA-1".to_vec()];
+        let final_tags = vec![vec![b"ATTGGACAGTCATGCT-1".to_vec(), b"ATCATGGCAGACGCTC-1".to_vec()],
+                                                vec![ b"GGAAAGCTCTCAACTT-1".to_vec(), b"GAGCAGACAGACAGGT-1".to_vec()]];
         let root = get_library_location();
         let out_dir = Path::new(&root).join("test/out");
         fs::create_dir(&out_dir).unwrap();
@@ -572,14 +577,14 @@ mod tests {
         // eprint!("SHA256: {}\n", d);
         assert_eq!(
             d,
-            "995674425D26FC12280768FEE2186D7FD165FCDAFE7D849E7A150A881727BABC"
+            "536FC3AEEF2B007AAAB85B7E29F8E6BDCBEAF7A8F1D14C9A0EC849FABCDC1E1D"
         );
         let fh = fs::File::open(Path::new(&final_outputbams1)).unwrap();
         let d = sha256_digest(fh).unwrap();
         let d = HEXUPPER.encode(d.as_ref());
         assert_eq!(
             d,
-            "253734E57D69F17E7557B3EC20E64BB5801B3D15889E45CC4F39E451D172DDE8"
+            "43F97A078D9860A4D083019919B17CDD05102C71467B223DF201E03B28AB14AD"
         );
         fs::remove_dir_all(out_dir).unwrap();  
     }

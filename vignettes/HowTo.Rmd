@@ -31,7 +31,7 @@ suppressPackageStartupMessages({
 })
 
 outpath<-"/tmp"
-root<-file.path(.libPaths(), "mergebamsR/extdata/test")
+root<-file.path(.libPaths()[1], "mergebamsR/extdata/test")
 ```
 
 ## Simple merging of two bams located in test folder
