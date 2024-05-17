@@ -3,7 +3,7 @@ pkgdown: 2.0.7
 pkgdown_sha: ~
 articles:
   HowTo: HowTo.html
-last_built: 2024-05-06T05:25Z
+last_built: 2024-05-17T04:21Z
 urls:
   reference: https://furlan-lab.github.io//reference
   article: https://furlan-lab.github.io//articles
