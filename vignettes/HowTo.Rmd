@@ -110,31 +110,81 @@ file.remove(list.files("/tmp", full.names = T))
 ## working on larger bam files
 
 Note that this bam file is too big to be included in the test.  You will want to use your own
-First, we determined that there are 31920074 reads total.
+First, we determined that there are 1045596 reads total.
 Second, we can plot the number of reads per barcode
 Third, we can select only barcodes that have > 10000 reads and less than 60000 and put them into a "middle.bam" and all other reads in the "extremes.bam"
 
-We can potentially speed things up by chunking the bam across cores and doing the work that way (the default is to write each output bam with each core).  An example is shown below.
+We can potentially speed things up by using cores to write each output bam. An example is shown below.  In this case, you don't want to use more cores than the number of output bams, that would be silly
+
+On the other hand, we have implemented another parallelization method whereby the bam is split across the cores.  You can see this is not faster for only a few big output bams.  But when lots of little output bams are sought, this is a better approach.  
 
 ```{r}
-bigbam<-"/Users/sfurlan/Desktop/merged_bams/geno_recipient_HSC.bam"
-bigbam<-"/Users/sfurlan/Desktop/merged_bams/geno_recipient.bam"
-cbs<-peekbam(bigbam, n = 31920074)
-cbs<-peekbam(bigbam, n = 1045596)
-dat<-table(cbs)
 library(ggplot2)
-ggplot(data.frame(nreads=log10(as.numeric(dat))), aes(x=nreads))+geom_density()+theme_bw()
-mid<-names(dat)[dat>10000 & dat < 60000]
-ext<-names(dat)[!(dat>10000 & dat < 60000)]
+
+
+bigbam1<-"/Users/sfurlan/Library/CloudStorage/OneDrive-FredHutchinsonCancerCenter/temp/geno_recipient_HSC.bam"
+cbs1<-peekbam(bigbam1, n = 1045596)
+dat1<-table(cbs1)
+ggplot(data.frame(nreads=log10(as.numeric(dat1))), aes(x=nreads))+geom_density()+theme_bw()
+mid<-names(dat1)[dat1>4000 & dat1 < 30000]
+ext<-names(dat1)[!(dat1>4000 & dat1 < 30000)]
 any(mid %in% ext)
 any(ext %in% mid)
 
-library(microbenchmark)
+t1<-system.time(subsetbam(inputbam = bigbam1, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), tags = list(mid, ext), cores=2))
+file.remove(c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"))
+t2<-system.time(subsetbam(inputbam = bigbam1, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), tags = list(mid, ext), cores=8, split_bam = T))
+cb_check<-peekbam("/Users/sfurlan/Desktop/middle.bam", n = 614127)
+all(cb_check %in% mid)
+all(mid %in% cb_check)
+file.remove(c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"))
+t1
+t2
+```
 
-twocores<-microbenchmark(subsetbam(inputbam = bigbam, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), tags = list(mid, ext), cores=2))
+
+```{r}
+tags_little_but_many<-split(cbs1, ceiling(seq_along(cbs1)/50000))
+length(tags_little_but_many)
+outputnames<-file.path("/Users/sfurlan/Desktop", paste0(seq(1, length(tags_little_but_many)), "_little.bam"))
+t1<-system.time(subsetbam(inputbam = bigbam1, outputbams = outputnames, tags = tags_little_but_many, cores=8))
+file.remove(outputnames)
+t2<-system.time(subsetbam(inputbam = bigbam1, outputbams = outputnames, tags = tags_little_but_many, split_bam = T, cores=8))
+file.remove(outputnames)
+t1
+t2
 
 
-eightcores<-microbenchmark(subsetbam(inputbam = bigbam, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), tags = list(mid, ext), cores=8, split_bam = T))
+```
+
+```{r, include=F, eval=F}
+bigbam2<-"/Users/sfurlan/Library/CloudStorage/OneDrive-FredHutchinsonCancerCenter/temp/geno_donor_GMP.bam"
+cbs2<-peekbam(bigbam2, n = 24720855)
+dat1<-table(cbs2)
+ggplot(data.frame(nreads=log10(as.numeric(dat1))), aes(x=nreads))+geom_density()+theme_bw()
+mid<-names(dat1)[dat1>10000 & dat1 < 60000]
+ext<-names(dat1)[!(dat1>10000 & dat1 < 60000)]
+any(mid %in% ext)
+any(ext %in% mid)
+t1<-system.time(subsetbam(inputbam = bigbam2, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), tags = list(mid, ext), cores=2))
+
+file.remove(c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"))
+t2<-system.time(subsetbam(inputbam = bigbam2, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), tags = list(mid, ext), cores=8, split_bam = T))
+cb_check<-peekbam("/Users/sfurlan/Desktop/middle.bam", n = 614127)
+all(cb_check %in% mid)
+all(mid %in% cb_check)
+file.remove(c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"))
+t1
+t2
+
+tags_little_but_many<-split(cbs2, ceiling(seq_along(cbs2)/50000))
+outputnames<-file.path("/Users/sfurlan/Desktop", paste0(seq(1, length(tags_little_but_many)), "_little.bam"))
+t1<-system.time(subsetbam(inputbam = bigbam2, outputbams = outputnames, tags = tags_little_but_many, cores=8))
+file.remove(outputnames)
+t2<-system.time(subsetbam(inputbam = bigbam2, outputbams = outputnames, tags = tags_little_but_many, split_bam = T, cores=8))
+file.remove(outputnames)
+t1
+t2
 ```
 
 

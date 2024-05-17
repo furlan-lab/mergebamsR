@@ -53,7 +53,6 @@ reference:
   - mergebams
   - peekbam
   - subsetbam
-  - mergebamsR-package
 articles:
 - title: Get Started
   navbar: Get Started

@@ -36,22 +36,20 @@ mergebams<-function(bams, out_path, names=NULL, prefixes=NULL){
   
 }
 
-
-#' Subset a BAM file based on specific tags
+#' Subset BAM files based on tags
 #'
-#' This function subselects reads from a BAM file based on the provided tags and 
-#' writes the subselected reads into separate output BAM files. The subselection 
-#' is done using a specified tag (default "CB"). This function can utilize multiple cores
-#' to perform the operation more efficiently.
+#' This function subsets BAM files based on specified tags. It checks if the number of tags matches the number of output BAM files.
+#' If prefixes are not provided, they are assumed to be empty. The function can operate in either a split mode where the BAM is split across cores,
+#' or a non-split mode where the subsetting is distributed across cores.
 #'
 #' @param inputbam A character string specifying the path to the input BAM file.
-#' @param tags A character vector of tags to filter the reads by.
-#' @param outputbams A character vector specifying the paths to the output BAM files.
-#' @param prefixes Optional; a character vector of prefixes to add to the read names in the output BAM files.
-#'        If NULL, no prefixes are added. Defaults to NULL.
-#' @param TAG Optional; the tag used for subselection, default is "CB".
-#' @param cores Optional; the number of cores to use for the process, default is 1.
-#' @param verbose Option to increase verbosity of output
+#' @param tags A character vector of tags used for subsetting the BAM file.
+#' @param outputbams A character vector specifying paths where the output BAM files should be written.
+#' @param prefixes An optional character vector specifying prefixes to be added to output file names. If NULL, no prefixes are added.
+#' @param TAG A character string specifying the tag to be used for subsetting. Default is "CB".
+#' @param cores An integer specifying the number of cores to use for parallel processing. Default is 1.
+#' @param verbose A logical flag indicating whether to print detailed messages. Default is FALSE.
+#' @param split_bam A logical flag indicating whether to split the BAM file across cores or distribute barcode subsetting across cores. Default is FALSE.
 #'
 #' @return No return value, called for side effects.
 #'
