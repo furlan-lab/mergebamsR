@@ -27,7 +27,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">mergebamsR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.5</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -165,24 +165,9 @@ reads from bam2.bam.</p>
 <div class="section level2">
 <h2 id="subset-individual-bam-files">Subset individual BAM files<a class="anchor" aria-label="anchor" href="#subset-individual-bam-files"></a>
 </h2>
-<p>Although other tools already exist for subsetting bam files using
-shell scripting, it may be helpful to subset BAM files by BAM tag using
-an R interface such that single-cell toolkits such as Seurat, Monocle,
-or SCE can be run adjacent. mergebamsR provides this usability.
-Currently only one bam file is supported as input. The number of each
-elements of the following should all be the same: 1. the list “tags”
-which specifies desired TAGS to be captured in each output file 2. a
-vector of file output names 3. optional prefixes to be added to each
-TAG</p>
-<p>Note that multithreading has been implemented to split work byt the
-number of outputbam files created. Therefore, for example, you should
-use 2 cores if creating two bam files.</p>
-<p>TAG is the name of the BAM Tag to subset by. The default is “CB”.</p>
+<p>First, to peek at a few of the cellbarcodes:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, outputbams <span class="op">=</span> <span class="st">"/tmp/test.bam"</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ATTGGACAGTCATGCT-1"</span>, <span class="st">"TTTACTGAGTCGATAA-1"</span><span class="op">)</span><span class="op">)</span>, cores<span class="op">=</span><span class="fl">1</span><span class="op">)</span></span></code></pre></div>
-<p>To peek at a few of the TAGs of interest</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cbs</span> <span class="op">=</span> <span class="fu"><a href="../reference/peekbam.html">peekbam</a></span><span class="op">(</span>bam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, TAG<span class="op">=</span><span class="st">"CB"</span>, n<span class="op">=</span><span class="fl">100</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">cbs</span> <span class="op">=</span> <span class="fu"><a href="../reference/peekbam.html">peekbam</a></span><span class="op">(</span>bam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, field <span class="op">=</span> <span class="st">"tag"</span>, TAG <span class="op">=</span> <span class="st">"CB"</span>, n<span class="op">=</span><span class="fl">100</span><span class="op">)</span></span>
 <span><span class="va">cbs</span></span></code></pre></div>
 <pre><code><span><span class="co">##   [1] "ATTGGACAGTCATGCT-1" "TTTACTGAGTCGATAA-1" "ATCATGGCAGACGCTC-1"</span></span>
 <span><span class="co">##   [4] "CACTCCATCTCGCTTG-1" "GCTGCGAGTCCGTCAG-1" "CTCTACGGTCCAGTAT-1"</span></span>
@@ -218,13 +203,166 @@ use 2 cores if creating two bam files.</p>
 <span><span class="co">##  [94] "TGATTTCTCTTACCTA-1" "TGGACGCTCACTTCAT-1" "ACGCAGCGTTACGGAG-1"</span></span>
 <span><span class="co">##  [97] "TCTGAGATCCCTAATT-1" "ACTGAACGTTATTCTC-1" "ACTGATGTCGTGGTCG-1"</span></span>
 <span><span class="co">## [100] "AACCATGGTCTTGTCC-1"</span></span></code></pre>
-<p>Now we can make two bams at a time</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, outputbams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"/tmp/test1.bam"</span>, <span class="st">"/tmp/test2.bam"</span><span class="op">)</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">cbs</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">50</span><span class="op">]</span>, <span class="va">cbs</span><span class="op">[</span><span class="fl">51</span><span class="op">:</span><span class="fl">100</span><span class="op">]</span><span class="op">)</span>, cores<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span></code></pre></div>
-<p>Note you may need to remove the files if they exst</p>
+<p>To peek at a few read names:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">names</span> <span class="op">=</span> <span class="fu"><a href="../reference/peekbam.html">peekbam</a></span><span class="op">(</span>bam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, field <span class="op">=</span> <span class="st">"name"</span>, n<span class="op">=</span><span class="fl">100</span><span class="op">)</span></span>
+<span><span class="va">names</span></span></code></pre></div>
+<pre><code><span><span class="co">##   [1] "VH00738:4:AAAW2TWHV:2:2504:18932:30136"</span></span>
+<span><span class="co">##   [2] "VH00738:4:AAAW2TWHV:1:2502:17909:53799"</span></span>
+<span><span class="co">##   [3] "VH00738:4:AAAW2TWHV:1:2214:43700:49596"</span></span>
+<span><span class="co">##   [4] "VH00738:4:AAAW2TWHV:1:1406:34876:36458"</span></span>
+<span><span class="co">##   [5] "VH00738:4:AAAW2TWHV:1:2312:17947:48309"</span></span>
+<span><span class="co">##   [6] "VH00738:4:AAAW2TWHV:2:1402:49001:4351" </span></span>
+<span><span class="co">##   [7] "VH00738:4:AAAW2TWHV:2:1608:74545:12321"</span></span>
+<span><span class="co">##   [8] "VH00738:4:AAAW2TWHV:1:1403:61802:38768"</span></span>
+<span><span class="co">##   [9] "VH00738:4:AAAW2TWHV:1:1111:37867:13665"</span></span>
+<span><span class="co">##  [10] "VH00738:4:AAAW2TWHV:1:2209:37489:53988"</span></span>
+<span><span class="co">##  [11] "VH00738:4:AAAW2TWHV:1:1502:46294:18645"</span></span>
+<span><span class="co">##  [12] "VH00738:4:AAAW2TWHV:2:2206:44154:54253"</span></span>
+<span><span class="co">##  [13] "VH00738:4:AAAW2TWHV:2:1208:29157:43993"</span></span>
+<span><span class="co">##  [14] "VH00738:4:AAAW2TWHV:2:1303:46559:52758"</span></span>
+<span><span class="co">##  [15] "VH00738:4:AAAW2TWHV:1:1405:75587:36118"</span></span>
+<span><span class="co">##  [16] "VH00738:4:AAAW2TWHV:2:2609:50516:26728"</span></span>
+<span><span class="co">##  [17] "VH00738:4:AAAW2TWHV:2:1506:70474:12378"</span></span>
+<span><span class="co">##  [18] "VH00738:4:AAAW2TWHV:2:2303:58772:43804"</span></span>
+<span><span class="co">##  [19] "VH00738:4:AAAW2TWHV:2:1203:67104:10220"</span></span>
+<span><span class="co">##  [20] "VH00738:4:AAAW2TWHV:1:2201:52050:38295"</span></span>
+<span><span class="co">##  [21] "VH00738:4:AAAW2TWHV:1:1506:53603:31518"</span></span>
+<span><span class="co">##  [22] "VH00738:4:AAAW2TWHV:2:2402:50554:21390"</span></span>
+<span><span class="co">##  [23] "VH00738:4:AAAW2TWHV:1:1301:33550:29075"</span></span>
+<span><span class="co">##  [24] "VH00738:4:AAAW2TWHV:1:2609:37716:55616"</span></span>
+<span><span class="co">##  [25] "VH00738:4:AAAW2TWHV:2:1303:35595:8137" </span></span>
+<span><span class="co">##  [26] "VH00738:4:AAAW2TWHV:2:1613:59359:28261"</span></span>
+<span><span class="co">##  [27] "VH00738:4:AAAW2TWHV:1:1312:47979:46037"</span></span>
+<span><span class="co">##  [28] "VH00738:4:AAAW2TWHV:2:1303:30615:55635"</span></span>
+<span><span class="co">##  [29] "VH00738:4:AAAW2TWHV:2:2314:61366:50600"</span></span>
+<span><span class="co">##  [30] "VH00738:4:AAAW2TWHV:1:1504:28835:7778" </span></span>
+<span><span class="co">##  [31] "VH00738:4:AAAW2TWHV:2:1502:70342:49426"</span></span>
+<span><span class="co">##  [32] "VH00738:4:AAAW2TWHV:1:2206:52448:17111"</span></span>
+<span><span class="co">##  [33] "VH00738:4:AAAW2TWHV:1:2109:63506:3291" </span></span>
+<span><span class="co">##  [34] "VH00738:4:AAAW2TWHV:1:1211:46653:36118"</span></span>
+<span><span class="co">##  [35] "VH00738:4:AAAW2TWHV:2:1512:65721:47192"</span></span>
+<span><span class="co">##  [36] "VH00738:4:AAAW2TWHV:1:2213:63468:10220"</span></span>
+<span><span class="co">##  [37] "VH00738:4:AAAW2TWHV:1:1311:42090:29624"</span></span>
+<span><span class="co">##  [38] "VH00738:4:AAAW2TWHV:2:2410:7911:15975" </span></span>
+<span><span class="co">##  [39] "VH00738:4:AAAW2TWHV:2:2604:47562:52852"</span></span>
+<span><span class="co">##  [40] "VH00738:4:AAAW2TWHV:2:1602:13270:43444"</span></span>
+<span><span class="co">##  [41] "VH00738:4:AAAW2TWHV:1:1108:61707:44088"</span></span>
+<span><span class="co">##  [42] "VH00738:4:AAAW2TWHV:1:1607:75303:26861"</span></span>
+<span><span class="co">##  [43] "VH00738:4:AAAW2TWHV:2:2311:42828:36989"</span></span>
+<span><span class="co">##  [44] "VH00738:4:AAAW2TWHV:1:1101:16660:42289"</span></span>
+<span><span class="co">##  [45] "VH00738:4:AAAW2TWHV:1:2303:61007:15483"</span></span>
+<span><span class="co">##  [46] "VH00738:4:AAAW2TWHV:1:1403:40310:24437"</span></span>
+<span><span class="co">##  [47] "VH00738:4:AAAW2TWHV:2:1503:71913:41910"</span></span>
+<span><span class="co">##  [48] "VH00738:4:AAAW2TWHV:2:1603:29839:16354"</span></span>
+<span><span class="co">##  [49] "VH00738:4:AAAW2TWHV:2:1109:43321:20367"</span></span>
+<span><span class="co">##  [50] "VH00738:4:AAAW2TWHV:1:2306:34308:33884"</span></span>
+<span><span class="co">##  [51] "VH00738:4:AAAW2TWHV:1:1211:52467:12018"</span></span>
+<span><span class="co">##  [52] "VH00738:4:AAAW2TWHV:2:2303:60003:40794"</span></span>
+<span><span class="co">##  [53] "VH00738:4:AAAW2TWHV:2:2514:20977:55616"</span></span>
+<span><span class="co">##  [54] "VH00738:4:AAAW2TWHV:2:1104:41617:3745" </span></span>
+<span><span class="co">##  [55] "VH00738:4:AAAW2TWHV:2:1608:25351:30344"</span></span>
+<span><span class="co">##  [56] "VH00738:4:AAAW2TWHV:2:1609:31524:2022" </span></span>
+<span><span class="co">##  [57] "VH00738:4:AAAW2TWHV:2:1607:38246:28697"</span></span>
+<span><span class="co">##  [58] "VH00738:4:AAAW2TWHV:1:2213:43131:53837"</span></span>
+<span><span class="co">##  [59] "VH00738:4:AAAW2TWHV:2:2406:38682:42194"</span></span>
+<span><span class="co">##  [60] "VH00738:4:AAAW2TWHV:2:1503:8006:19326" </span></span>
+<span><span class="co">##  [61] "VH00738:4:AAAW2TWHV:2:1213:17455:24229"</span></span>
+<span><span class="co">##  [62] "VH00738:4:AAAW2TWHV:1:1214:47771:26898"</span></span>
+<span><span class="co">##  [63] "VH00738:4:AAAW2TWHV:2:2310:16811:35058"</span></span>
+<span><span class="co">##  [64] "VH00738:4:AAAW2TWHV:1:1504:20636:37064"</span></span>
+<span><span class="co">##  [65] "VH00738:4:AAAW2TWHV:1:2303:51955:9993" </span></span>
+<span><span class="co">##  [66] "VH00738:4:AAAW2TWHV:2:2210:55742:18891"</span></span>
+<span><span class="co">##  [67] "VH00738:4:AAAW2TWHV:2:2112:34838:47817"</span></span>
+<span><span class="co">##  [68] "VH00738:4:AAAW2TWHV:2:2309:17663:55257"</span></span>
+<span><span class="co">##  [69] "VH00738:4:AAAW2TWHV:2:1514:50895:29871"</span></span>
+<span><span class="co">##  [70] "VH00738:4:AAAW2TWHV:1:1110:16792:32767"</span></span>
+<span><span class="co">##  [71] "VH00738:4:AAAW2TWHV:2:2212:75284:40358"</span></span>
+<span><span class="co">##  [72] "VH00738:4:AAAW2TWHV:1:1303:28229:47457"</span></span>
+<span><span class="co">##  [73] "VH00738:4:AAAW2TWHV:2:1602:56595:25498"</span></span>
+<span><span class="co">##  [74] "VH00738:4:AAAW2TWHV:1:1104:47051:5657" </span></span>
+<span><span class="co">##  [75] "VH00738:4:AAAW2TWHV:1:1104:39723:40055"</span></span>
+<span><span class="co">##  [76] "VH00738:4:AAAW2TWHV:2:2210:22340:50959"</span></span>
+<span><span class="co">##  [77] "VH00738:4:AAAW2TWHV:1:2310:64623:22128"</span></span>
+<span><span class="co">##  [78] "VH00738:4:AAAW2TWHV:2:1410:63885:44371"</span></span>
+<span><span class="co">##  [79] "VH00738:4:AAAW2TWHV:2:2508:10222:40245"</span></span>
+<span><span class="co">##  [80] "VH00738:4:AAAW2TWHV:1:1107:11396:21049"</span></span>
+<span><span class="co">##  [81] "VH00738:4:AAAW2TWHV:2:2104:33929:30438"</span></span>
+<span><span class="co">##  [82] "VH00738:4:AAAW2TWHV:1:1407:53849:20405"</span></span>
+<span><span class="co">##  [83] "VH00738:4:AAAW2TWHV:2:2506:28532:11072"</span></span>
+<span><span class="co">##  [84] "VH00738:4:AAAW2TWHV:2:1207:67918:33865"</span></span>
+<span><span class="co">##  [85] "VH00738:4:AAAW2TWHV:2:2302:60268:52001"</span></span>
+<span><span class="co">##  [86] "VH00738:4:AAAW2TWHV:1:1504:28930:19231"</span></span>
+<span><span class="co">##  [87] "VH00738:4:AAAW2TWHV:1:1109:41219:20841"</span></span>
+<span><span class="co">##  [88] "VH00738:4:AAAW2TWHV:1:1402:37792:8440" </span></span>
+<span><span class="co">##  [89] "VH00738:4:AAAW2TWHV:1:1611:53300:38938"</span></span>
+<span><span class="co">##  [90] "VH00738:4:AAAW2TWHV:1:1413:56367:23226"</span></span>
+<span><span class="co">##  [91] "VH00738:4:AAAW2TWHV:2:2608:16054:45659"</span></span>
+<span><span class="co">##  [92] "VH00738:4:AAAW2TWHV:1:2101:27869:14082"</span></span>
+<span><span class="co">##  [93] "VH00738:4:AAAW2TWHV:2:1201:45366:7229" </span></span>
+<span><span class="co">##  [94] "VH00738:4:AAAW2TWHV:1:2601:24726:21920"</span></span>
+<span><span class="co">##  [95] "VH00738:4:AAAW2TWHV:1:2111:57144:6812" </span></span>
+<span><span class="co">##  [96] "VH00738:4:AAAW2TWHV:1:2510:19367:22923"</span></span>
+<span><span class="co">##  [97] "VH00738:4:AAAW2TWHV:2:1406:74034:24154"</span></span>
+<span><span class="co">##  [98] "VH00738:4:AAAW2TWHV:1:1401:44192:48271"</span></span>
+<span><span class="co">##  [99] "VH00738:4:AAAW2TWHV:2:2105:13819:36875"</span></span>
+<span><span class="co">## [100] "VH00738:4:AAAW2TWHV:1:2202:61612:2685"</span></span></code></pre>
+<p>Although other tools already exist for subsetting bam files using
+shell scripting, it may be helpful to subset BAM files by name or a BAM
+tag using an R interface such that single-cell toolkits such as Seurat,
+Monocle, or SCE can be run-adjacent. mergebamsR provides this usability.
+Currently only one bam file is supported as input. The number of each
+elements of the following should all be the same: 1. the list “features”
+which specifies desired features to be captured in each output file
+(current features supported are read names and tags such as “CB”) 2. a
+vector of file output names</p>
+<p>Note that multithreading has been implemented to split work byt the
+number of outputbam files created. Therefore, for example, you should
+use 2 cores if creating two bam files.</p>
+<p>TAG is the name of the BAM Tag to subset by. The default is “CB”.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, outputbams <span class="op">=</span> <span class="st">"/tmp/test.bam"</span>, features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ATTGGACAGTCATGCT-1"</span>, <span class="st">"TTTACTGAGTCGATAA-1"</span><span class="op">)</span><span class="op">)</span>, cores<span class="op">=</span><span class="fl">1</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="st">"/tmp/test.bam"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## [1] TRUE</span></span></code></pre>
+<p>One can optionally dump all the reads that aren’t subsetted into a
+separate file as such:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, outputbams <span class="op">=</span> <span class="st">"/tmp/test.bam"</span>, features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ATTGGACAGTCATGCT-1"</span>, <span class="st">"TTTACTGAGTCGATAA-1"</span><span class="op">)</span><span class="op">)</span>, cores<span class="op">=</span><span class="fl">1</span>, dump_bam <span class="op">=</span> <span class="st">"/tmp/dump.bam"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="st">"/tmp/test.bam"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## [1] TRUE</span></span></code></pre>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="st">"/tmp/dump.bam"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## [1] TRUE</span></span></code></pre>
+<p>Here’s an example of subsetting by read name, dumping the other reads
+into a file</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, </span>
+<span>          outputbams <span class="op">=</span> <span class="st">"/tmp/test.bam"</span>, </span>
+<span>          features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/peekbam.html">peekbam</a></span><span class="op">(</span>bam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, field <span class="op">=</span> <span class="st">"name"</span>, n<span class="op">=</span><span class="fl">100</span><span class="op">)</span><span class="op">)</span>, </span>
+<span>          cores<span class="op">=</span><span class="fl">1</span>, </span>
+<span>          field <span class="op">=</span> <span class="st">"name"</span>, </span>
+<span>          dump_bam <span class="op">=</span> <span class="st">"/tmp/dump.bam"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="st">"/tmp/test.bam"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## [1] TRUE</span></span></code></pre>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="st">"/tmp/dump.bam"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## [1] TRUE</span></span></code></pre>
+<p>Now we can make two bams at a time</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">root</span>, <span class="st">"bam1.bam"</span><span class="op">)</span>, outputbams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"/tmp/test1.bam"</span>, <span class="st">"/tmp/test2.bam"</span><span class="op">)</span>, features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">cbs</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">50</span><span class="op">]</span>, <span class="va">cbs</span><span class="op">[</span><span class="fl">51</span><span class="op">:</span><span class="fl">100</span><span class="op">]</span><span class="op">)</span>, cores<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="st">"/tmp/test1.bam"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## [1] TRUE</span></span></code></pre>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="st">"/tmp/test2.bam"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## [1] TRUE</span></span></code></pre>
+<p>Note you may need to remove the files if they exst</p>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="st">"/tmp"</span>, full.names <span class="op">=</span> <span class="cn">T</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##  [1]  TRUE FALSE FALSE FALSE FALSE  TRUE  TRUE FALSE  TRUE  TRUE  TRUE</span></span></code></pre>
+<pre><code><span><span class="co">##  [1] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE  TRUE  TRUE FALSE</span></span></code></pre>
 </div>
 <div class="section level2">
 <h2 id="working-on-larger-bam-files">working on larger bam files<a class="anchor" aria-label="anchor" href="#working-on-larger-bam-files"></a>
@@ -242,7 +380,7 @@ use more cores than the number of output bams, that would be silly</p>
 whereby the bam is split across the cores. You can see this is not
 faster for only a few big output bams. But when lots of little output
 bams are sought, this is a better approach.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span></span>
 <span></span>
@@ -250,66 +388,66 @@ bams are sought, this is a better approach.</p>
 <span><span class="va">cbs1</span><span class="op">&lt;-</span><span class="fu"><a href="../reference/peekbam.html">peekbam</a></span><span class="op">(</span><span class="va">bigbam1</span>, n <span class="op">=</span> <span class="fl">1045596</span><span class="op">)</span></span>
 <span><span class="va">dat1</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">cbs1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>nreads<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">dat1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x<span class="op">=</span><span class="va">nreads</span><span class="op">)</span><span class="op">)</span><span class="op">+</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density.html" class="external-link">geom_density</a></span><span class="op">(</span><span class="op">)</span><span class="op">+</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="HowTo_files/figure-html/unnamed-chunk-11-1.png" width="100%"></p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<p><img src="HowTo_files/figure-html/unnamed-chunk-14-1.png" width="100%"></p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mid</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">dat1</span><span class="op">)</span><span class="op">[</span><span class="va">dat1</span><span class="op">&gt;</span><span class="fl">4000</span> <span class="op">&amp;</span> <span class="va">dat1</span> <span class="op">&lt;</span> <span class="fl">30000</span><span class="op">]</span></span>
 <span><span class="va">ext</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">dat1</span><span class="op">)</span><span class="op">[</span><span class="op">!</span><span class="op">(</span><span class="va">dat1</span><span class="op">&gt;</span><span class="fl">4000</span> <span class="op">&amp;</span> <span class="va">dat1</span> <span class="op">&lt;</span> <span class="fl">30000</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="va">mid</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">ext</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] FALSE</span></span></code></pre>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="va">ext</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">mid</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] FALSE</span></span></code></pre>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">t1</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="va">bigbam1</span>, outputbams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"/Users/sfurlan/Desktop/middle.bam"</span>, <span class="st">"/Users/sfurlan/Desktop/extremes.bam"</span><span class="op">)</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">mid</span>, <span class="va">ext</span><span class="op">)</span>, cores<span class="op">=</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">t1</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="va">bigbam1</span>, outputbams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"/Users/sfurlan/Desktop/middle.bam"</span>, <span class="st">"/Users/sfurlan/Desktop/extremes.bam"</span><span class="op">)</span>, features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">mid</span>, <span class="va">ext</span><span class="op">)</span>, cores<span class="op">=</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"/Users/sfurlan/Desktop/middle.bam"</span>, <span class="st">"/Users/sfurlan/Desktop/extremes.bam"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] TRUE TRUE</span></span></code></pre>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">t2</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="va">bigbam1</span>, outputbams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"/Users/sfurlan/Desktop/middle.bam"</span>, <span class="st">"/Users/sfurlan/Desktop/extremes.bam"</span><span class="op">)</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">mid</span>, <span class="va">ext</span><span class="op">)</span>, cores<span class="op">=</span><span class="fl">8</span>, split_bam <span class="op">=</span> <span class="cn">T</span><span class="op">)</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">t2</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="va">bigbam1</span>, outputbams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"/Users/sfurlan/Desktop/middle.bam"</span>, <span class="st">"/Users/sfurlan/Desktop/extremes.bam"</span><span class="op">)</span>, features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">mid</span>, <span class="va">ext</span><span class="op">)</span>, cores<span class="op">=</span><span class="fl">8</span>, split_bam <span class="op">=</span> <span class="cn">T</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">cb_check</span><span class="op">&lt;-</span><span class="fu"><a href="../reference/peekbam.html">peekbam</a></span><span class="op">(</span><span class="st">"/Users/sfurlan/Desktop/middle.bam"</span>, n <span class="op">=</span> <span class="fl">614127</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="va">cb_check</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">mid</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] TRUE</span></span></code></pre>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="va">mid</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">cb_check</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] TRUE</span></span></code></pre>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"/Users/sfurlan/Desktop/middle.bam"</span>, <span class="st">"/Users/sfurlan/Desktop/extremes.bam"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] TRUE TRUE</span></span></code></pre>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">t1</span></span></code></pre></div>
 <pre><code><span><span class="co">##    user  system elapsed </span></span>
-<span><span class="co">##   2.869   0.029   8.142</span></span></code></pre>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<span><span class="co">##   2.865   0.035   8.209</span></span></code></pre>
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">t2</span></span></code></pre></div>
 <pre><code><span><span class="co">##    user  system elapsed </span></span>
-<span><span class="co">##  20.118   0.201  11.914</span></span></code></pre>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<span><span class="co">##  20.127   0.248  12.044</span></span></code></pre>
+<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tags_little_but_many</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">cbs1</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">ceiling</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">cbs1</span><span class="op">)</span><span class="op">/</span><span class="fl">50000</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">tags_little_but_many</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] 21</span></span></code></pre>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">outputnames</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="st">"/Users/sfurlan/Desktop"</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">tags_little_but_many</span><span class="op">)</span><span class="op">)</span>, <span class="st">"_little.bam"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">t1</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="va">bigbam1</span>, outputbams <span class="op">=</span> <span class="va">outputnames</span>, tags <span class="op">=</span> <span class="va">tags_little_but_many</span>, cores<span class="op">=</span><span class="fl">8</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">t1</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="va">bigbam1</span>, outputbams <span class="op">=</span> <span class="va">outputnames</span>, features <span class="op">=</span> <span class="va">tags_little_but_many</span>, cores<span class="op">=</span><span class="fl">8</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="va">outputnames</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##  [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</span></span>
 <span><span class="co">## [16] TRUE TRUE TRUE TRUE TRUE TRUE</span></span></code></pre>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">t2</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="va">bigbam1</span>, outputbams <span class="op">=</span> <span class="va">outputnames</span>, tags <span class="op">=</span> <span class="va">tags_little_but_many</span>, split_bam <span class="op">=</span> <span class="cn">T</span>, cores<span class="op">=</span><span class="fl">8</span><span class="op">)</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">t2</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span><span class="fu"><a href="../reference/subsetbam.html">subsetbam</a></span><span class="op">(</span>inputbam <span class="op">=</span> <span class="va">bigbam1</span>, outputbams <span class="op">=</span> <span class="va">outputnames</span>, features <span class="op">=</span> <span class="va">tags_little_but_many</span>, split_bam <span class="op">=</span> <span class="cn">T</span>, cores<span class="op">=</span><span class="fl">8</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.remove</a></span><span class="op">(</span><span class="va">outputnames</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##  [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</span></span>
 <span><span class="co">## [16] TRUE TRUE TRUE TRUE TRUE TRUE</span></span></code></pre>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb50"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">t1</span></span></code></pre></div>
 <pre><code><span><span class="co">##    user  system elapsed </span></span>
-<span><span class="co">## 192.589   1.924  34.484</span></span></code></pre>
-<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
+<span><span class="co">## 193.738   2.424  43.369</span></span></code></pre>
+<div class="sourceCode" id="cb52"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">t2</span></span></code></pre></div>
 <pre><code><span><span class="co">##    user  system elapsed </span></span>
-<span><span class="co">##  20.334   0.262  12.222</span></span></code></pre>
+<span><span class="co">##  21.841   0.543  19.344</span></span></code></pre>
 </div>
 <div class="section level2">
 <h2 id="appendix">Appendix<a class="anchor" aria-label="anchor" href="#appendix"></a>
 </h2>
-<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb54"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## R version 4.3.2 (2023-10-31)</span></span>
 <span><span class="co">## Platform: aarch64-apple-darwin20 (64-bit)</span></span>
@@ -329,7 +467,7 @@ bams are sought, this is a better approach.</p>
 <span><span class="co">## [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## other attached packages:</span></span>
-<span><span class="co">## [1] ggplot2_3.5.0    mergebamsR_0.0.4</span></span>
+<span><span class="co">## [1] ggplot2_3.5.0    mergebamsR_0.0.5</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## loaded via a namespace (and not attached):</span></span>
 <span><span class="co">##  [1] gtable_0.3.4      jsonlite_1.8.8    highr_0.10        dplyr_1.1.4      </span></span>
