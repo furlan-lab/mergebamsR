@@ -67,9 +67,14 @@ mergebams<-function(bams, out_path, names=NULL, prefixes=NULL){
 #' If any of these conditions is not met, the function will stop and throw an error.
 #' @export
 
-subsetbam<-function(inputbam, tags, outputbams, prefixes = NULL, TAG="CB", cores=1, verbose=F, split_bam=F){
-  # if(length(inputbams)!=length(tags)) {stop("Input number of bam files is not equal to number of tags")}
-  if(length(tags)!=length(outputbams)) {stop("Input number of output bam files is not equal to number of output bams")}
+subsetbam<-function(inputbam, features, outputbams, prefixes = NULL, field = c("cb", "name"), dump_bam=NA, TAG="CB", cores=1, verbose=F, split_bam=F){
+  if is.na(dump_bam){
+    if(length(features)!=length(outputbams)) {stop("Input number of output bam files is not equal to number of elements in features")}
+  } else {
+    if(typeof(dump_bam)!="character") {stop("Dump bam input error")}
+    if(file.exists(dump_bam)) {stop("Dump bam file exists.  Remove it and rerun subsetbam")}
+    if(length(features)!=length(outputbams)+1) {stop("Input number of output bam files is not equal to number of elements in features")}
+  }
   exists<-file.exists(inputbam)
   if(verbose){
     message(paste0("Found file: ", inputbam, "\n"))
@@ -91,13 +96,13 @@ subsetbam<-function(inputbam, tags, outputbams, prefixes = NULL, TAG="CB", cores
       if(verbose){
         message(paste0("Running subset_bam using TAG = ", TAG, " splitting the bam across ", cores, " core(s)"))
       }
-      subsetbam_rust_helper(inputbam = inputbam, tags = tags, outputbams = outputbams, prefixes = prefixes, tag = TAG, cores=cores)
+      subsetbam_rust_helper(inputbam = inputbam, features = features, outputbams = outputbams, prefixes = prefixes, tag = TAG, cores=cores, dump_bam)
     } else {
       if(verbose){
         message(paste0("Running subset_bam using TAG = ", TAG, " distributing barcode subsetting across ", cores, " core(s)"))
       }
       nc<-pbmcapply::pbmclapply(1:length(tags), function(i){
-        subsetbam_rust_helper(inputbam = inputbam, tags = tags[i], outputbams = outputbams[i], prefixes = prefixes[i], tag = TAG, cores = 1)
+        subsetbam_rust_helper(inputbam = inputbam, tags = tags[i], outputbams = outputbams[i], prefixes = prefixes[i], tag = TAG, cores = 1, dump_bam)
       }, mc.cores = cores)
     }
   } else {

@@ -55,6 +55,8 @@ pub struct ChunkArgs<'a> {
     bam_tag: String,
     virtual_start: Option<i64>,
     virtual_stop: Option<i64>,
+    field: &'a str,
+    dump_bam: Option<&'a str>,
 }
 
 pub struct BamArgs<'a> {
@@ -62,6 +64,8 @@ pub struct BamArgs<'a> {
     bam_file: &'a str,
     out_dir: &'a Path,
     bam_tag: String,
+    field: &'a str,
+    dump_bam: Option<&'a str>,
 }
 
 pub struct BamOuts {
@@ -75,7 +79,7 @@ pub struct ChunkOuts {
 }
 
 
-pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<Vec<u8>>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str) {
+pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<Vec<u8>>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str, field: &str, dump_bam: Option<&str>) {
     let ll = "info";
     let bam_tag = tag.to_string();
     let out_bam_file = &final_outputbams[0].to_string();
@@ -98,6 +102,8 @@ pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<Vec<u8>>>, final_outp
         bam_file: &bam_file,
         out_dir: Path::new(out_bam_file),
         bam_tag: bam_tag.clone(),
+        field: field,
+        dump_bam: dump_bam,
     };
 
     let results = slice_bam(&c);
@@ -115,8 +121,10 @@ pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<Vec<u8>>>, final_outp
         metrics.kept_reads += m.kept_reads;
     }
 
+    let m = &results.unwrap().metrics;
     // let mut tmp_bams = Vec::new();
-    add_metrics(&mut metrics, &results.metrics);
+    // add_metrics(&mut metrics, &results.metrics);
+    add_metrics(&mut metrics, m);
 
     if metrics.kept_reads == 0 {
         error!("Zero alignments were kept. Does your BAM contain the cell barcodes and/or tag you chose?");
@@ -141,7 +149,7 @@ where
         .collect()
 }
 
-pub fn subset_bam_rust_split(inputbam: &str, final_tags: Vec<Vec<Vec<u8>>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str, cores: u64) {
+pub fn subset_bam_rust_split(inputbam: &str, final_tags: Vec<Vec<Vec<u8>>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str, cores: u64, field: &str, dump_bam: Option<&str>) {
     
     // use std::collections::HashMap;
     let ll = "info";
@@ -188,6 +196,8 @@ pub fn subset_bam_rust_split(inputbam: &str, final_tags: Vec<Vec<Vec<u8>>>, fina
             bam_tag: bam_tag.clone(),
             virtual_start: *virtual_start,
             virtual_stop: *virtual_stop,
+            field: field,
+            dump_bam: dump_bam,
         };
         chunks.push(c);
     }
@@ -412,25 +422,47 @@ pub fn slice_bam_chunk(args: &ChunkArgs) -> ChunkOuts {
         out_writers.push(load_writer(&bam, Path::new(&tmp_out_bam_file)).unwrap());
     }
     // let mut out_bam = load_writer(&bam, &out_bam_file).unwrap();
+    let mut dump_writer = if let Some(dump_bam_file) = &args.dump_bam {
+        Some(load_writer(&bam, Path::new(dump_bam_file)).unwrap())
+    } else {
+        None
+    };
     
     let mut metrics = Metrics {
         total_reads: 0,
         barcoded_reads: 0,
         kept_reads: 0,
     };
+    
+    // for r in bam.iter_chunk(args.virtual_start, args.virtual_stop) {
+    //     let rec = r.unwrap();
+    //     metrics.total_reads += 1;
+    //     let barcode = get_cell_barcode(&rec, &args.bam_tag);
+    //     if barcode.is_some() {
+    //         metrics.barcoded_reads += 1;
+    //         let barcode = barcode.unwrap();
+    //         let out_bam_index = args.cell_barcodes.get(&barcode);
+    //         match out_bam_index{
+    //             Some(index) => {metrics.kept_reads +=1;
+    //                                     out_writers[*index].write(&rec).unwrap();
+    //                                 }
+    //             None => continue
+    //         }
+    //     }
+    // }
     for r in bam.iter_chunk(args.virtual_start, args.virtual_stop) {
         let rec = r.unwrap();
-        metrics.total_reads += 1;
-        let barcode = get_cell_barcode(&rec, &args.bam_tag);
-        if barcode.is_some() {
-            metrics.barcoded_reads += 1;
-            let barcode = barcode.unwrap();
-            let out_bam_index = args.cell_barcodes.get(&barcode);
-            match out_bam_index{
-                Some(index) => {metrics.kept_reads +=1;
-                                        out_writers[*index].write(&rec).unwrap();
-                                    }
-                None => continue
+        metrics.total_reads += 1;  // Assuming you want to track total reads here
+        
+        match args.field {
+            "name" => {
+                process_name_split(&rec, args,  &mut metrics, &mut out_writers);
+                if let Some(ref mut dump_writer) = dump_writer {
+                    dump_writer.write(&rec).unwrap();
+                }
+            },
+            _ => {
+                process_cb_split(&rec, args, &mut metrics, &mut out_writers);
             }
         }
     }
@@ -444,36 +476,107 @@ pub fn slice_bam_chunk(args: &ChunkArgs) -> ChunkOuts {
 }
 
 
-
-pub fn slice_bam(args: &BamArgs) -> BamOuts {
+pub fn slice_bam(args: &BamArgs) -> Result<BamOuts, Box<dyn std::error::Error>> {
     use crate::rust_htslib::bam::Read;
-    let mut bam = bam::Reader::from_path(args.bam_file).unwrap();
-    let mut out_bam = load_writer(&bam, &args.out_dir).unwrap();
+    
+    let mut bam = bam::Reader::from_path(&args.bam_file)?;
+    let mut out_bam = load_writer(&bam, &args.out_dir)?;
     let mut metrics = Metrics {
         total_reads: 0,
         barcoded_reads: 0,
         kept_reads: 0,
     };
-    for r in bam.records(){
-        let rec = r.unwrap();
-        metrics.total_reads += 1;
-        let barcode = get_cell_barcode(&rec, &args.bam_tag);
-        if barcode.is_some() {
-            metrics.barcoded_reads += 1;
-            let barcode = barcode.unwrap();
-            if args.cell_barcodes.contains(&barcode) {
-                metrics.kept_reads += 1;
-                out_bam.write(&rec).unwrap();
+    let mut dump_writer = if let Some(dump_bam_file) = &args.dump_bam {
+        Some(load_writer(&bam, Path::new(dump_bam_file))?)
+    } else {
+        None
+    };
+
+    for r in bam.records() {
+        let rec = r?;
+        metrics.total_reads += 1;  // Assuming you want to track total reads here
+        
+        match args.field {
+            "name" => {
+                process_name(&rec, args, &mut out_bam, &mut metrics);
+                if let Some(ref mut dump_writer) = dump_writer {
+                    dump_writer.write(&rec).unwrap();
+                }
+            },
+            _ => {
+                process_cb(&rec, args, &mut out_bam, &mut metrics);
             }
         }
     }
-    let r = BamOuts {
-        metrics: metrics,
-    };
-    r
+
+    Ok(BamOuts { metrics })
 }
 
+pub fn process_cb(
+    rec: &Record,
+    args: &BamArgs,
+    out_bam: &mut bam::Writer,
+    metrics: &mut Metrics,
+) {
+    metrics.total_reads += 1;
+    let barcode = get_cell_barcode(&rec, &args.bam_tag);
+    if barcode.is_some() {
+        metrics.barcoded_reads += 1;
+        let barcode = barcode.unwrap();
+        if args.cell_barcodes.contains(&barcode) {
+            metrics.kept_reads += 1;
+            out_bam.write(&rec).unwrap();
+        }
+    }
+}
 
+pub fn process_name(
+    rec: &Record,
+    args: &BamArgs,
+    out_bam: &mut bam::Writer,
+    metrics: &mut Metrics,
+) {
+    metrics.total_reads += 1;
+    let name = rec.qname();
+    if args.cell_barcodes.contains(name) {
+        metrics.kept_reads += 1;
+        out_bam.write(&rec).unwrap();
+    }
+}
+
+pub fn process_cb_split(
+    rec: &Record,
+    args: &ChunkArgs,
+    metrics: &mut Metrics,
+    out_writers: &mut Vec<bam::Writer>,
+) {
+    metrics.total_reads += 1;
+    let barcode = get_cell_barcode(&rec, &args.bam_tag);
+    let out_bam_index = args.cell_barcodes.get(&barcode);
+    match out_bam_index{
+        Some(index) => {metrics.kept_reads +=1;
+                                out_writers[*index].write(&rec).unwrap();
+                            }
+        None => return
+    }
+}
+
+pub fn process_name_split(
+    rec: &Record,
+    args: &ChunkArgs,
+    metrics: &mut Metrics,
+    out_writers: &mut Vec<bam::Writer>,
+) {
+    metrics.total_reads += 1;
+    let name = rec.qname();
+    let out_bam_index = args.cell_barcodes.get(&name);
+    match out_bam_index{
+        Some(index) => {metrics.kept_reads +=1;
+                                out_writers[*index].write(&rec).unwrap();
+                            }
+        None => return
+    }
+}
 
 pub fn merge_bams(tmp_bams: &Vec<PathBuf>, out_bam_file: &Path) {
     // eprintln!("Merging tmp_bams: {:?}", tmp_bams);
@@ -491,6 +594,7 @@ pub fn merge_bams(tmp_bams: &Vec<PathBuf>, out_bam_file: &Path) {
         }
     }
 }
+
 
 
 
@@ -546,7 +650,7 @@ mod tests {
         let final_outputbams1 =  Path::new(&root).join("test/out/subset1_sc.bam").to_str().unwrap().to_string();
         // let final_outputbams2 =  Path::new(&root).join("test/out/subset2.bam").to_str().unwrap().to_string();
         let tag = "CB";
-        subset_bam_rust(&inputbam, final_tags, vec![final_outputbams1.clone()], final_prefixes, tag);
+        subset_bam_rust(&inputbam, final_tags, vec![final_outputbams1.clone()], final_prefixes, tag, "cb", None);
         let fh = fs::File::open(Path::new(&final_outputbams1)).unwrap();
         let d = sha256_digest(fh).unwrap();
         let d = HEXUPPER.encode(d.as_ref());
@@ -570,7 +674,7 @@ mod tests {
         let final_outputbams1 =  Path::new(&root).join("test/out/subset1.bam").to_str().unwrap().to_string();
         let final_outputbams2 =  Path::new(&root).join("test/out/subset2.bam").to_str().unwrap().to_string();
         let tag = "CB";
-        subset_bam_rust_split(&inputbam, final_tags, vec![final_outputbams1.clone(), final_outputbams2.clone()], final_prefixes, tag, 8);
+        subset_bam_rust_split(&inputbam, final_tags, vec![final_outputbams1.clone(), final_outputbams2.clone()], final_prefixes, tag, 8, "cb", None);
         let fh = fs::File::open(Path::new(&final_outputbams2)).unwrap();
         let d = sha256_digest(fh).unwrap();
         let d = HEXUPPER.encode(d.as_ref());
@@ -639,3 +743,485 @@ mod tests {
     eprintln!("{:?}", cells.get(&"GAGCAGACAGACAGGT-1").unwrap());
     }
 }
+
+// use std::cmp;
+// use failure::Error;
+// use rayon::prelude::*;
+// use rust_htslib::bam;
+// use rust_htslib::bam::record::Aux;
+// use rust_htslib::bam::Record;
+
+// use log::{error, info};
+// use simplelog::*;
+// use std::collections::{HashMap, HashSet};
+// use std::fs;
+// use std::io::{self, prelude::*};
+// use std::path::{Path, PathBuf};
+// use std::process;
+// use tempfile::tempdir;
+
+// pub struct Metrics {
+//     pub total_reads: usize,
+//     pub barcoded_reads: usize,
+//     pub kept_reads: usize,
+// }
+
+// pub struct ChunkArgs<'a> {
+//     cell_barcodes: &'a HashMap<&'a Vec<u8>, usize>,
+//     outputbam_no: usize,
+//     i: usize,
+//     bam_file: &'a str,
+//     tmp_dir: &'a Path,
+//     bam_tag: String,
+//     virtual_start: Option<i64>,
+//     virtual_stop: Option<i64>,
+//     field: &'a str,
+//     dump_bam: Option<&'a str>,
+// }
+
+// pub struct BamArgs<'a> {
+//     cell_barcodes: &'a HashSet<Vec<u8>>,
+//     bam_file: &'a str,
+//     out_dir: &'a Path,
+//     bam_tag: String,
+//     field: &'a str,
+//     dump_bam: Option<&'a str>,
+// }
+
+// pub struct BamOuts {
+//     metrics: Metrics,
+// }
+
+// pub struct ChunkOuts {
+//     metrics: Metrics,
+//     out_paths: Vec<PathBuf>,
+// }
+
+// pub fn subset_bam_rust(inputbam: &str, final_tags: Vec<Vec<Vec<u8>>>, final_outputbams: Vec<String>, final_prefixes: Vec<String>, tag: &str, cores: u64, field: &str, dump_bam: Option<&str>) {
+//     let ll = "info";
+//     let bam_tag = tag.to_string();
+//     let ll = match ll {
+//         "info" => LevelFilter::Info,
+//         "debug" => LevelFilter::Debug,
+//         "error" => LevelFilter::Error,
+//         _ => {
+//             eprintln!("Log level not valid");
+//             process::exit(1);
+//         }
+//     };
+//     SimpleLogger::init(ll, Config::default()).unwrap();
+//     check_inputs_exist(inputbam, final_outputbams.clone());
+//     let tmp_dir = tempdir().unwrap();
+
+//     let cell_barcodes = if cores == 1 {
+//         final_tags[0].iter().cloned().collect()
+//     } else {
+//         let mut cell_barcodes = HashMap::new();
+//         for (index, vec) in final_tags.iter().enumerate() {
+//             for cb in vec.iter() {
+//                 cell_barcodes.insert(cb, index);
+//             }
+//         }
+//         cell_barcodes
+//     };
+
+//     let virtual_offsets = bgzf_noffsets(inputbam, &cores).unwrap();
+//     let chunks: Vec<_> = virtual_offsets.iter().enumerate().map(|(i, (virtual_start, virtual_stop))| {
+//         ChunkArgs {
+//             cell_barcodes: &cell_barcodes,
+//             outputbam_no: final_outputbams.len(),
+//             i,
+//             bam_file: inputbam,
+//             tmp_dir: tmp_dir.path(),
+//             bam_tag: bam_tag.clone(),
+//             virtual_start: *virtual_start,
+//             virtual_stop: *virtual_stop,
+//             field,
+//             dump_bam,
+//         }
+//     }).collect();
+
+//     let pool = rayon::ThreadPoolBuilder::new()
+//         .num_threads(cores as usize)
+//         .build()
+//         .unwrap();
+//     let results: Vec<_> = pool.install(|| {
+//         chunks.par_iter().map(|chunk| slice_bam_chunk(chunk)).collect()
+//     });
+
+//     let mut metrics = Metrics {
+//         total_reads: 0,
+//         barcoded_reads: 0,
+//         kept_reads: 0,
+//     };
+
+//     let mut tmp_bams_vec = Vec::new();
+//     for c in results.iter() {
+//         add_metrics(&mut metrics, &c.metrics);
+//         tmp_bams_vec.push(&c.out_paths);
+//     }
+
+//     if metrics.kept_reads == 0 {
+//         error!("Zero alignments were kept. Does your BAM contain the cell barcodes and/or tag you chose?");
+//         process::exit(2);
+//     }
+
+//     let tmp_bams_vec = transpose_vec(tmp_bams_vec);
+
+//     if cores == 1 {
+//         for (i, filefrom) in tmp_bams_vec[0].iter().enumerate() {
+//             let fileto = &final_outputbams[i];
+//             fs::copy(filefrom, fileto).unwrap();
+//         }
+//     } else {
+//         for (i, tmp_bams) in tmp_bams_vec.into_iter().enumerate() {
+//             merge_bams(&tmp_bams, Path::new(&final_outputbams[i]));
+//         }
+//     }
+
+//     info!("Done!");
+//     info!(
+//         "Visited {} alignments, found {} with barcodes and kept {}",
+//         metrics.total_reads, metrics.barcoded_reads, metrics.kept_reads
+//     );
+// }
+
+// fn add_metrics(metrics: &mut Metrics, m: &Metrics) {
+//     metrics.total_reads += m.total_reads;
+//     metrics.barcoded_reads += m.barcoded_reads;
+//     metrics.kept_reads += m.kept_reads;
+// }
+
+// fn transpose_vec<T>(v: Vec<&Vec<T>>) -> Vec<Vec<T>>
+// where
+//     T: Clone,
+// {
+//     assert!(!v.is_empty());
+//     (0..v[0].len())
+//         .map(|i| v.iter().map(|inner| inner[i].clone()).collect::<Vec<T>>())
+//         .collect()
+// }
+
+// pub fn check_inputs_exist(bam_file: &str, out_bams_path: Vec<String>) {
+//     if !Path::new(bam_file).exists() {
+//         error!("File {} does not exist", bam_file);
+//         process::exit(1);
+//     }
+//     for out_bam in out_bams_path.iter() {
+//         let path = Path::new(out_bam);
+//         if path.exists() {
+//             error!("Output path already exists");
+//             process::exit(1);
+//         }
+//         if path.is_dir() {
+//             error!("Output path is a directory");
+//             process::exit(1);
+//         }
+//         if let Some(parent_dir) = path.parent() {
+//             if !parent_dir.exists() && parent_dir.to_str().unwrap().len() > 0 {
+//                 error!("Output directory {:?} does not exist", parent_dir);
+//                 process::exit(1);
+//             }
+//         } else {
+//             error!("Unable to parse directory from {}", out_bam);
+//             process::exit(1);
+//         }
+//     }
+
+//     match Path::new(bam_file).extension().and_then(|ext| ext.to_str()) {
+//         Some("bam") => {
+//             let bai = bam_file.to_owned() + ".bai";
+//             if !Path::new(&bai).exists() {
+//                 error!("BAM index {} does not exist", bai);
+//                 process::exit(1);
+//             }
+//         }
+//         Some("cram") => {
+//             let crai = bam_file.to_owned() + ".crai";
+//             if !Path::new(&crai).exists() {
+//                 error!("CRAM index {} does not exist", crai);
+//                 process::exit(1);
+//             }
+//         }
+//         _ => {
+//             error!("BAM file did not end in .bam or .cram. Unable to validate");
+//             process::exit(1);
+//         }
+//     }
+// }
+
+// pub fn get_cell_barcode(rec: &Record, bam_tag: &str) -> Option<Vec<u8>> {
+//     match rec.aux(bam_tag.as_bytes()) {
+//         Ok(Aux::String(hp)) => Some(hp.as_bytes().to_vec()),
+//         _ => None,
+//     }
+// }
+
+// pub fn load_writer(bam: &bam::Reader, out_bam_path: &Path) -> Result<bam::Writer, Error> {
+//     let hdr = rust_htslib::bam::Header::from_template(bam.header());
+//     bam::Writer::from_path(out_bam_path, &hdr, rust_htslib::bam::Format::Bam).map_err(|e| e.into())
+// }
+
+// pub fn bgzf_noffsets(bam_path: &str, num_chunks: &u64) -> Result<Vec<(Option<i64>, Option<i64>)>, Error> {
+//     fn vec_diff(input: &[u64]) -> Vec<u64> {
+//         input.windows(2).map(|w| w[1] - w[0]).collect()
+//     }
+
+//     if *num_chunks == 1 {
+//         return Ok(vec![(None, None)]);
+//     }
+
+//     let bam_bytes = fs::metadata(bam_path)?.len();
+//     let initial_offsets: Vec<_> = (1..*num_chunks).map(|n| bam_bytes * n as u64 / num_chunks).collect();
+
+//     let num_bytes = if initial_offsets.len() > 1 {
+//         let diff = vec_diff(&initial_offsets);
+//         cmp::min(1 << 16, *diff.iter().max().unwrap())
+//     } else {
+//         1 << 16
+//     };
+
+//     let mut adjusted_offsets = Vec::new();
+//     let mut fp = fs::File::open(bam_path)?;
+//     for offset in initial_offsets {
+//         fp.seek(io::SeekFrom::Start(offset))?;
+//         let mut buffer = vec![0; 2 << 16];
+//         fp.read(&mut buffer)?;
+//         for i in 0..num_bytes {
+//             if is_valid_bgzf_block(&buffer[i as usize..]) {
+//                 adjusted_offsets.push(offset + i as u64);
+//                 break;
+//             }
+//         }
+//     }
+
+//     if adjusted_offsets.len() == 1 {
+//         return Ok(vec![(None, None)]);
+//     }
+
+//     let mut final_offsets = vec![(None, Some((adjusted_offsets[1] as i64) << 16))];
+//     for n in 2..num_chunks - 1 {
+//         let n = n as usize;
+//         final_offsets.push((
+//             Some((adjusted_offsets[n - 1] as i64) << 16),
+//             Some((adjusted_offsets[n] as i64) << 16),
+//         ));
+//     }
+//     final_offsets.push((
+//         Some((adjusted_offsets[adjusted_offsets.len() - 1] as i64) << 16),
+//         None,
+//     ));
+//     Ok(final_offsets)
+// }
+
+// pub fn is_valid_bgzf_block(block: &[u8]) -> bool {
+//     block.len() >= 18 && block[0..4] == [31, 139, 8, 4]
+// }
+
+// pub fn slice_bam_chunk(args: &ChunkArgs) -> ChunkOuts {
+//     let mut bam = bam::Reader::from_path(args.bam_file).unwrap();
+//     let tmp_out_bam_files: Vec<_> = (0..args.outputbam_no)
+//         .map(|x| args.tmp_dir.join(format!("tmp_chunk{}_out{}.bam", args.i, x)))
+//         .collect();
+
+//     let mut out_writers: Vec<_> = tmp_out_bam_files.iter()
+//         .map(|tmp_out_bam_file| load_writer(&bam, tmp_out_bam_file).unwrap())
+//         .collect();
+
+//     let mut metrics = Metrics {
+//         total_reads: 0,
+//         barcoded_reads: 0,
+//         kept_reads: 0,
+//     };
+
+//     for r in bam.iter_chunk(args.virtual_start, args.virtual_stop) {
+//         let rec = r.unwrap();
+//         metrics.total_reads += 1;
+//         if let Some(barcode) = get_cell_barcode(&rec, &args.bam_tag) {
+//             metrics.barcoded_reads += 1;
+//             if let Some(index) = args.cell_barcodes.get(&barcode) {
+//                 metrics.kept_reads += 1;
+//                 out_writers[*index].write(&rec).unwrap();
+//             }
+//         }
+//     }
+
+//     ChunkOuts {
+//         metrics,
+//         out_paths: tmp_out_bam_files.clone(),
+//     }
+// }
+
+// pub fn slice_bam(args: &BamArgs) -> Result<BamOuts, Box<dyn std::error::Error>> {
+//     // use rust_htslib::bam::Reader;
+//     let mut bam = bam::Reader::from_path(&args.bam_file)?;
+//     let mut out_bam = load_writer(&bam, &args.out_dir)?;
+//     let mut metrics = Metrics {
+//         total_reads: 0,
+//         barcoded_reads: 0,
+//         kept_reads: 0,
+//     };
+//     let mut dump_writer = if let Some(dump_bam_file) = &args.dump_bam {
+//         Some(load_writer(&bam, Path::new(dump_bam_file))?)
+//     } else {
+//         None
+//     };
+
+//     for r in bam.records() {
+//         let rec = r?;
+//         metrics.total_reads += 1;
+//         match args.field {
+//             "name" => {
+//                 process_name(&rec, args, &mut out_bam, &mut metrics);
+//                 if let Some(ref mut dump_writer) = dump_writer {
+//                     dump_writer.write(&rec).unwrap();
+//                 }
+//             }
+//             _ => process_cb(&rec, args, &mut out_bam, &mut metrics),
+//         }
+//     }
+
+//     Ok(BamOuts { metrics })
+// }
+
+// pub fn process_cb(rec: &Record, args: &BamArgs, out_bam: &mut bam::Writer, metrics: &mut Metrics) {
+//     metrics.total_reads += 1;
+//     if let Some(barcode) = get_cell_barcode(rec, &args.bam_tag) {
+//         metrics.barcoded_reads += 1;
+//         if args.cell_barcodes.contains(&barcode) {
+//             metrics.kept_reads += 1;
+//             out_bam.write(rec).unwrap();
+//         }
+//     }
+// }
+
+// pub fn process_name(rec: &Record, args: &BamArgs, out_bam: &mut bam::Writer, metrics: &mut Metrics) {
+//     metrics.total_reads += 1;
+//     if args.cell_barcodes.contains(rec.qname()) {
+//         metrics.kept_reads += 1;
+//         out_bam.write(rec).unwrap();
+//     }
+// }
+
+// pub fn merge_bams(tmp_bams: &[PathBuf], out_bam_file: &Path) {
+//     let bam = bam::Reader::from_path(tmp_bams[0].to_str().unwrap()).unwrap();
+//     let mut out_bam = load_writer(&bam, out_bam_file).unwrap();
+//     for b in tmp_bams {
+//         let mut rdr = bam::Reader::from_path(b).unwrap();
+//         for rec in rdr.records() {
+//             out_bam.write(&rec.unwrap()).unwrap();
+//         }
+//     }
+// }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use data_encoding::HEXUPPER;
+//     use ring::digest::{Context, Digest, SHA256};
+
+//     pub fn get_library_location() -> String {
+//         let exe_path = std::env::current_exe().unwrap();
+//         let path = exe_path.to_str().unwrap().split("/src/rust/target/debug/deps").collect::<Vec<&str>>()[0];
+//         let fileloc = Path::new(&path).join("inst/extdata/");
+//         if fileloc.exists() {
+//             fileloc.to_str().unwrap().to_string()
+//         } else {
+//             Path::new(&path).join("extdata/").to_str().unwrap().to_string()
+//         }
+//     }
+
+//     fn sha256_digest<R: Read>(mut reader: R) -> Result<Digest, Error> {
+//         let mut context = Context::new(&SHA256);
+//         let mut buffer = [0; 1024];
+
+//         loop {
+//             let count = reader.read(&mut buffer)?;
+//             if count == 0 {
+//                 break;
+//             }
+//             context.update(&buffer[..count]);
+//         }
+
+//         Ok(context.finish())
+//     }
+
+//     #[test]
+//     fn test_bam_single_core() {
+//         let final_tags = vec![vec![b"ATTGGACAGTCATGCT-1".to_vec(), b"ATCATGGCAGACGCTC-1".to_vec()]];
+//         let root = get_library_location();
+//         let out_dir = Path::new(&root).join("test/out");
+//         fs::create_dir(&out_dir).unwrap();
+//         let inputbam = Path::new(&root).join("test/bam1.bam").to_str().unwrap().to_string();
+//         let final_prefixes = vec!["".to_string()];
+//         let final_outputbams1 = Path::new(&root).join("test/out/subset1_sc.bam").to_str().unwrap().to_string();
+//         let tag = "CB";
+//         subset_bam_rust(&inputbam, final_tags, vec![final_outputbams1.clone()], final_prefixes, tag, 1, "cb", None);
+//         let fh = fs::File::open(Path::new(&final_outputbams1)).unwrap();
+//         let d = sha256_digest(fh).unwrap();
+//         let d = HEXUPPER.encode(d.as_ref());
+//         assert_eq!(d, "43F97A078D9860A4D083019919B17CDD05102C71467B223DF201E03B28AB14AD");
+//         fs::remove_dir_all(out_dir).unwrap();
+//     }
+
+//     #[test]
+//     fn test_bam_multiple_core() {
+//         let final_tags = vec![
+//             vec![b"ATTGGACAGTCATGCT-1".to_vec(), b"ATCATGGCAGACGCTC-1".to_vec()],
+//             vec![b"GGAAAGCTCTCAACTT-1".to_vec(), b"GAGCAGACAGACAGGT-1".to_vec()],
+//         ];
+//         let root = get_library_location();
+//         let out_dir = Path::new(&root).join("test/out");
+//         fs::create_dir(&out_dir).unwrap();
+//         let inputbam = Path::new(&root).join("test/bam1.bam").to_str().unwrap().to_string();
+//         let final_prefixes = vec!["".to_string()];
+//         let final_outputbams1 = Path::new(&root).join("test/out/subset1.bam").to_str().unwrap().to_string();
+//         let final_outputbams2 = Path::new(&root).join("test/out/subset2.bam").to_str().unwrap().to_string();
+//         let tag = "CB";
+//         subset_bam_rust(&inputbam, final_tags, vec![final_outputbams1.clone(), final_outputbams2.clone()], final_prefixes, tag, 8, "cb", None);
+//         let fh = fs::File::open(Path::new(&final_outputbams2)).unwrap();
+//         let d = sha256_digest(fh).unwrap();
+//         let d = HEXUPPER.encode(d.as_ref());
+//         assert_eq!(d, "536FC3AEEF2B007AAAB85B7E29F8E6BDCBEAF7A8F1D14C9A0EC849FABCDC1E1D");
+//         let fh = fs::File::open(Path::new(&final_outputbams1)).unwrap();
+//         let d = sha256_digest(fh).unwrap();
+//         let d = HEXUPPER.encode(d.as_ref());
+//         assert_eq!(d, "43F97A078D9860A4D083019919B17CDD05102C71467B223DF201E03B28AB14AD");
+//         fs::remove_dir_all(out_dir).unwrap();
+//     }
+
+//     #[test]
+//     fn test_hashmaps() {
+//         let mut cells = HashMap::new();
+
+//         cells.insert("ATTGGACAGTCATGCT-1".to_string(), "1".to_string());
+//         cells.insert("TTTACTGAGTCGATAA-1".to_string(), "1".to_string());
+//         cells.insert("ATCATGGCAGACGCTC-1".to_string(), "2".to_string());
+//         cells.insert("TCATTACTCGGAAACG-1".to_string(), "2".to_string());
+//         cells.insert("ATGTGTGCACATGTGT-1".to_string(), "2".to_string());
+//         cells.insert("TTTACTGAGTCGATAA-1".to_string(), "3".to_string());
+//         cells.insert("AAGTCTGCACAGGAGT-1".to_string(), "3".to_string());
+
+//         let tags = vec![
+//             vec![
+//                 "ATTGGACAGTCATGCT-1", "TTTACTGAGTCGATAA-1", "ATCATGGCAGACGCTC-1", "CACTCCATCTCGCTTG-1",
+//                 "GCTGCGAGTCCGTCAG-1", "CTCTACGGTCCAGTAT-1", "TAGTTGGGTTCAGACT-1", "CAGTCCTAGCAATATG-1",
+//             ],
+//             vec![
+//                 "CGACCTTTCCACGTGG-1", "GGAAAGCTCTCAACTT-1", "GGACATTCAGCAGTTT-1", "GACGCGTCATCTCGCT-1",
+//                 "TCGGGACGTGCTCTTC-1", "GTTCATTTCGAATCCA-1", "GTGCAGCGTACACCGC-1", "CAGTCCTTCACGGTTA-1",
+//             ],
+//             vec![
+//                 "GAGCAGACAGACAGGT-1", "ATGTGTGCACATGTGT-1", "TCATTACTCGGAAACG-1", "TGCGTGGAGCCATCGC-1",
+//                 "GTCTCGTCACCTATCC-1", "CATTATCCATTGTGCA-1", "AAGTCTGCACAGGAGT-1", "GACCAATGTCCTCTTG-1",
+//             ],
+//         ];
+//         for (i, vec) in tags.iter().enumerate() {
+//             for cb in vec {
+//                 cells.insert(cb.to_string(), i.to_string());
+//             }
+//         }
+
+//         eprintln!("{:?}", cells.get("GAGCAGACAGACAGGT-1").unwrap());
+//     }
+// }
