@@ -9,3 +9,8 @@
 # mergebamsR v0.0.4
 
 * subset bam with better parallel processing
+
+# mergebamsR v0.0.5
+
+* subset bams by name
+* option to non-subsetted reads to a "dump" file
