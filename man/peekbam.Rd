@@ -4,7 +4,7 @@
 \alias{peekbam}
 \title{Peek into a BAM File with Tag Filtering}
 \usage{
-peekbam(bam, n = 100, TAG = "CB")
+peekbam(bam, n = 100, field = c("tag", "name"), TAG = "CB")
 }
 \arguments{
 \item{bam}{A character string specifying the path to a single BAM file.

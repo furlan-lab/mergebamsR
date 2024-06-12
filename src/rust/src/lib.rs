@@ -73,7 +73,15 @@ fn mergebams_rust_helper(bams: Robj, out_path: Robj, names: Robj, prefixes: Robj
 /// @export
 /// @keywords internal
 #[extendr]
-fn peekbam_rust_helper(bam: Robj, n: Robj, tag: Robj) -> Robj{
+fn peekbam_rust_helper(bam: Robj, n: Robj, field: Robj, tag: Robj) -> Robj{
+    let field: &str = match field.as_str_vector() {
+        Some(fields) => fields[0],
+        None => {
+                  eprintln!("ERROR: field is not a string");
+                  return Robj::from(0)
+                },
+    };
+
     let bam_file: &str  = match bam.as_str_vector() {
         Some(files) => files[0],
         None => {
@@ -99,7 +107,7 @@ fn peekbam_rust_helper(bam: Robj, n: Robj, tag: Robj) -> Robj{
     };
 
     // let mut tags: Result<Vec<&str>> = Ok(Vec::new());
-    let tags = utils::peekbam_rust(bam_file, n, tag);
+    let tags = utils::peekbam_rust(bam_file, n, field, tag);
     match tags {
         Ok(tags) => Robj::from(tags),
         Err(_) => {
@@ -114,7 +122,7 @@ fn peekbam_rust_helper(bam: Robj, n: Robj, tag: Robj) -> Robj{
 /// @export
 /// @keywords internal
 #[extendr]
-fn subsetbam_rust_helper(inputbam: Robj, features: Robj, outputbams: Robj, prefixes: Robj, tag: Robj, cores: Robj, field: Robj, dump_bam: Robj){
+fn subsetbam_rust_helper(inputbam: Robj, features: Robj, outputbams: Robj, tag: Robj, cores: Robj, field: Robj, dump_bam: Robj){
     
     let inputbam: &str  = match inputbam.as_str_vector() {
         Some(files) => files[0],
@@ -159,13 +167,6 @@ fn subsetbam_rust_helper(inputbam: Robj, features: Robj, outputbams: Robj, prefi
                   return
                 },
     };
-    let final_prefixes = match prefixes.as_string_vector() {
-        Some(prefixes2) => prefixes2,
-        None => {
-                  eprintln!("ERROR: prefixes is not a string vector");
-                  return
-                },
-    };
     let cores = match cores.as_real() {
         Some(n) => n as u64,
         None => {
@@ -187,12 +188,12 @@ fn subsetbam_rust_helper(inputbam: Robj, features: Robj, outputbams: Robj, prefi
         };
     }
 
-    if cores>1{
-        subsetbam::subset_bam_rust_split(inputbam, final_features, final_outputbams, final_prefixes, tag, cores, field, dump_bam_r);
-    } else {
-        subsetbam::subset_bam_rust(inputbam, final_features, final_outputbams, final_prefixes, tag, field, dump_bam_r);
-    }
-    // subsetbam::subset_bam_rust(inputbam, final_features, final_outputbams, final_prefixes, tag, cores, field, dump_bam_r);
+    // if cores>1{
+    //     subsetbam::subset_bam_rust_split(inputbam, final_features, final_outputbams, final_prefixes, tag, cores, field, dump_bam_r);
+    // } else {
+    //     subsetbam::subset_bam_rust(inputbam, final_features, final_outputbams, final_prefixes, tag, field, dump_bam_r);
+    // }
+    subsetbam::subset_bam(inputbam, final_features, final_outputbams, tag, cores, field, dump_bam_r);
     // subsetbam::subset_bam_rust_parallel(inputbam, final_tags, final_outputbams, final_prefixes, tag, cores);
     
 }

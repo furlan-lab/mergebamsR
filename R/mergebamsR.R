@@ -1,6 +1,6 @@
 #' Merge BAM files
 #'
-#' This function merges multiple BAM files into a single output file. It checks for the existence of each input BAM file 
+#' This function merges multiple BAM files into a single output file. It checks for the existence of each input BAM file
 #' and the output directory. The function allows optional customization of output names and prefixes.
 #'
 #' @param bams A vector of file paths for the BAM files to be merged.
@@ -33,76 +33,56 @@ mergebams<-function(bams, out_path, names=NULL, prefixes=NULL){
   } else {
     message(paste0("Files not found:\n", paste(bams[!exists], collapse="\n")))
   }
-  
+
 }
 
-#' Subset BAM files based on tags
+#' Subset BAM Files Based on Features
 #'
-#' This function subsets BAM files based on specified tags. It checks if the number of tags matches the number of output BAM files.
-#' If prefixes are not provided, they are assumed to be empty. The function can operate in either a split mode where the BAM is split across cores,
-#' or a non-split mode where the subsetting is distributed across cores.
+#' This function subsets a BAM file based on provided features (e.g., cell barcodes) and outputs one or more BAM files.
 #'
-#' @param inputbam A character string specifying the path to the input BAM file.
-#' @param tags A character vector of tags used for subsetting the BAM file.
-#' @param outputbams A character vector specifying paths where the output BAM files should be written.
-#' @param prefixes An optional character vector specifying prefixes to be added to output file names. If NULL, no prefixes are added.
-#' @param TAG A character string specifying the tag to be used for subsetting. Default is "CB".
-#' @param cores An integer specifying the number of cores to use for parallel processing. Default is 1.
-#' @param verbose A logical flag indicating whether to print detailed messages. Default is FALSE.
-#' @param split_bam A logical flag indicating whether to split the BAM file across cores or distribute barcode subsetting across cores. Default is FALSE.
+#' @param inputbam A string specifying the path to the input BAM file.
+#' @param features A list of features (e.g., cell barcodes) to subset.
+#' @param outputbams A vector of strings specifying the paths to the output BAM files.
+#' @param field A string specifying the field to use for subsetting. Must be either `"tag"` ( use with TAG 'cb' for cell barcode) or `"name"`. Default is `"tag"`.
+#' @param dump_bam A string specifying the path to the dump BAM file. Default is `NA`.
+#' @param TAG A string specifying the BAM tag to use for subsetting. Default is `"CB"`.
+#' @param cores An integer specifying the number of cores to use for parallel processing. Default is `1`.
+#' @param verbose A logical indicating whether to print detailed messages. Default is `FALSE`.
+#' @param split_bam A logical indicating whether to split the BAM file across multiple cores. Default is `FALSE`.
 #'
-#' @return No return value, called for side effects.
-#'
-#' @examples
-#' subsetbam(inputbam = "path/to/input.bam", 
-#'           tags = c("TAG1", "TAG2"), 
-#'           outputbams = c("path/to/output1.bam", "path/to/output2.bam"),
-#'           prefixes = c("prefix1", "prefix2"),
-#'           TAG = "CB",
-#'           cores = 2)
+#' @return None
+#' @export
 #'
 #' @details
-#' It's important that the length of `tags` is equal to the length of `outputbams`.
-#' If `prefixes` is provided, its length must also match the length of `outputbams`.
-#' If any of these conditions is not met, the function will stop and throw an error.
+#' It's important that the length of `features` is equal to the length of `outputbams`.
 #' @export
 
-subsetbam<-function(inputbam, features, outputbams, prefixes = NULL, field = c("cb", "name"), dump_bam=NA, TAG="CB", cores=1, verbose=F, split_bam=F){
-  if is.na(dump_bam){
+subsetbam<-function(inputbam, features, outputbams, field = c("tag", "name"), dump_bam=NA, TAG="CB", cores=1, verbose=F, split_bam=F){
+  if(is.na(dump_bam)){
     if(length(features)!=length(outputbams)) {stop("Input number of output bam files is not equal to number of elements in features")}
   } else {
     if(typeof(dump_bam)!="character") {stop("Dump bam input error")}
     if(file.exists(dump_bam)) {stop("Dump bam file exists.  Remove it and rerun subsetbam")}
-    if(length(features)!=length(outputbams)+1) {stop("Input number of output bam files is not equal to number of elements in features")}
+    if(length(features)!=length(outputbams)) {stop("Input number of output bam files is not equal to number of elements in features")}
   }
   exists<-file.exists(inputbam)
+  field <- match.arg(field)
   if(verbose){
     message(paste0("Found file: ", inputbam, "\n"))
   }
-  if(is.null(prefixes)){
-    prefixes<-rep("", length(outputbams))
-    if(verbose){
-      message(paste0("No prefixes supplied"))
-    }
-  } else {
-    if(verbose){
-      message(paste0("Found ", length(prefixes), " prefixes"))
-    }
-  }
-  if(length(prefixes)!=length(outputbams)) {stop("Input number of prefixes is not equal to number of output bams")}
   if(any(sapply(outputbams, file.exists))) {stop("One of the outputbam file exists.  Remove it and rerun subsetbam")}
   if(exists){
     if(split_bam){
       if(verbose){
         message(paste0("Running subset_bam using TAG = ", TAG, " splitting the bam across ", cores, " core(s)"))
       }
-      subsetbam_rust_helper(inputbam = inputbam, features = features, outputbams = outputbams, prefixes = prefixes, tag = TAG, cores=cores, dump_bam)
+      subsetbam_rust_helper(inputbam = inputbam, features = features, outputbams = outputbams, tag = TAG, field = field, cores=cores, dump_bam)
     } else {
       if(verbose){
         message(paste0("Running subset_bam using TAG = ", TAG, " distributing barcode subsetting across ", cores, " core(s)"))
       }
-      nc<-pbmcapply::pbmclapply(1:length(tags), function(i){
-        subsetbam_rust_helper(inputbam = inputbam, tags = tags[i], outputbams = outputbams[i], prefixes = prefixes[i], tag = TAG, cores = 1, dump_bam)
+      nc<-pbmcapply::pbmclapply(1:length(features), function(i){
+        subsetbam_rust_helper(inputbam = inputbam, features = features[i], outputbams = outputbams[i], tag = TAG, field = field, cores = 1, dump_bam = dump_bam)
       }, mc.cores = cores)
     }
   } else {
@@ -133,17 +113,18 @@ subsetbam<-function(inputbam, features, outputbams, prefixes = NULL, field = c("
 #' @examples
 #' # Assuming 'example.bam' is a valid BAM file path:
 #' peekbam("example.bam", n = 10, TAG = "CB")
-#' 
+#'
 #'@references This documentation was written by ChatGPT v4 - OpenAI, conversation with the author, 5-2-2024.
 #'@export
-peekbam <- function(bam, n=100, TAG="CB"){
+peekbam <- function(bam, n=100, field = c("tag", "name"), TAG="CB"){
   if(as.integer(n)<1){stop("n must be more than 1")}
   if(length(bam)>1){stop("More than one bam file supplied")}
+  field<-match.arg(field)
   exists<-file.exists(bam)
   if(exists){
-    peekbam_rust_helper(bam, n, TAG)
+    peekbam_rust_helper(bam, n, field, TAG)
   } else {
     message(paste0("File not found:\n", paste(bam, collapse="\n")))
   }
-  
+
 }
