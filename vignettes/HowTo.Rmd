@@ -74,31 +74,66 @@ mergebams(bams = c(file.path(root, "bam1.bam"), file.path(root, "bam2.bam")),
 
 ## Subset individual BAM files
 
-Although other tools already exist for subsetting bam files using shell scripting, it may be helpful to subset BAM files by BAM tag using an R interface such that single-cell toolkits such as Seurat, Monocle, or SCE can be run adjacent.  mergebamsR provides this usability.  Currently only one bam file is supported as input.  The number of each elements of the following should all be the same:
-1. the list "tags" which specifies desired TAGS to be captured in each output file
+First, to peek at a few of the cellbarcodes:
+
+```{r}
+cbs = peekbam(bam = file.path(root, "bam1.bam"), field = "tag", TAG = "CB", n=100)
+cbs
+```
+
+To peek at a few read names:
+
+```{r}
+names = peekbam(bam = file.path(root, "bam1.bam"), field = "name", n=100)
+names
+```
+
+Although other tools already exist for subsetting bam files using shell scripting, it may be helpful to subset BAM files by name or a BAM tag using an R interface such that single-cell toolkits such as Seurat, Monocle, or SCE can be run-adjacent.  mergebamsR provides this usability.  Currently only one bam file is supported as input.  The number of each elements of the following should all be the same:
+1. the list "features" which specifies desired features to be captured in each output file (current features supported are read names and tags such as "CB")
 2. a vector of file output names
-3. optional prefixes to be added to each TAG
 
 Note that multithreading has been implemented to split work byt the number of outputbam files created.  Therefore, for example, you should use 2 cores if creating two bam files.
-
 
 TAG is the name of the BAM Tag to subset by.  The default is "CB".
 
 ```{r}
-subsetbam(inputbam = file.path(root, "bam1.bam"), outputbams = "/tmp/test.bam", tags = list(c("ATTGGACAGTCATGCT-1", "TTTACTGAGTCGATAA-1")), cores=1)
+subsetbam(inputbam = file.path(root, "bam1.bam"), outputbams = "/tmp/test.bam", features = list(c("ATTGGACAGTCATGCT-1", "TTTACTGAGTCGATAA-1")), cores=1)
+
+file.remove("/tmp/test.bam")
+
 ```
 
-To peek at a few of the TAGs of interest
+One can optionally dump all the reads that aren't subsetted into a separate file as such:
 
 ```{r}
-cbs = peekbam(bam = file.path(root, "bam1.bam"), TAG="CB", n=100)
-cbs
+subsetbam(inputbam = file.path(root, "bam1.bam"), outputbams = "/tmp/test.bam", features = list(c("ATTGGACAGTCATGCT-1", "TTTACTGAGTCGATAA-1")), cores=1, dump_bam = "/tmp/dump.bam")
+
+file.remove("/tmp/test.bam")
+file.remove("/tmp/dump.bam")
 ```
+
+Here's an example of subsetting by read name, dumping the other reads into a file
+
+```{r}
+subsetbam(inputbam = file.path(root, "bam1.bam"), 
+          outputbams = "/tmp/test.bam", 
+          features = list(peekbam(bam = file.path(root, "bam1.bam"), field = "name", n=100)), 
+          cores=1, 
+          field = "name", 
+          dump_bam = "/tmp/dump.bam")
+
+file.remove("/tmp/test.bam")
+file.remove("/tmp/dump.bam")
+```
+
+
 
 Now we can make two bams at a time
 ```{r}
-subsetbam(inputbam = file.path(root, "bam1.bam"), outputbams = c("/tmp/test1.bam", "/tmp/test2.bam"), tags = list(cbs[1:50], cbs[51:100]), cores=2)
+subsetbam(inputbam = file.path(root, "bam1.bam"), outputbams = c("/tmp/test1.bam", "/tmp/test2.bam"), features = list(cbs[1:50], cbs[51:100]), cores=2)
 
+file.remove("/tmp/test1.bam")
+file.remove("/tmp/test2.bam")
 ```
 
 Note you may need to remove the files if they exst
@@ -131,9 +166,9 @@ ext<-names(dat1)[!(dat1>4000 & dat1 < 30000)]
 any(mid %in% ext)
 any(ext %in% mid)
 
-t1<-system.time(subsetbam(inputbam = bigbam1, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), tags = list(mid, ext), cores=2))
+t1<-system.time(subsetbam(inputbam = bigbam1, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), features = list(mid, ext), cores=2))
 file.remove(c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"))
-t2<-system.time(subsetbam(inputbam = bigbam1, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), tags = list(mid, ext), cores=8, split_bam = T))
+t2<-system.time(subsetbam(inputbam = bigbam1, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), features = list(mid, ext), cores=8, split_bam = T))
 cb_check<-peekbam("/Users/sfurlan/Desktop/middle.bam", n = 614127)
 all(cb_check %in% mid)
 all(mid %in% cb_check)
@@ -147,9 +182,9 @@ t2
 tags_little_but_many<-split(cbs1, ceiling(seq_along(cbs1)/50000))
 length(tags_little_but_many)
 outputnames<-file.path("/Users/sfurlan/Desktop", paste0(seq(1, length(tags_little_but_many)), "_little.bam"))
-t1<-system.time(subsetbam(inputbam = bigbam1, outputbams = outputnames, tags = tags_little_but_many, cores=8))
+t1<-system.time(subsetbam(inputbam = bigbam1, outputbams = outputnames, features = tags_little_but_many, cores=8))
 file.remove(outputnames)
-t2<-system.time(subsetbam(inputbam = bigbam1, outputbams = outputnames, tags = tags_little_but_many, split_bam = T, cores=8))
+t2<-system.time(subsetbam(inputbam = bigbam1, outputbams = outputnames, features = tags_little_but_many, split_bam = T, cores=8))
 file.remove(outputnames)
 t1
 t2
@@ -166,10 +201,10 @@ mid<-names(dat1)[dat1>10000 & dat1 < 60000]
 ext<-names(dat1)[!(dat1>10000 & dat1 < 60000)]
 any(mid %in% ext)
 any(ext %in% mid)
-t1<-system.time(subsetbam(inputbam = bigbam2, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), tags = list(mid, ext), cores=2))
+t1<-system.time(subsetbam(inputbam = bigbam2, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), features = list(mid, ext), cores=2))
 
 file.remove(c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"))
-t2<-system.time(subsetbam(inputbam = bigbam2, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), tags = list(mid, ext), cores=8, split_bam = T))
+t2<-system.time(subsetbam(inputbam = bigbam2, outputbams = c("/Users/sfurlan/Desktop/middle.bam", "/Users/sfurlan/Desktop/extremes.bam"), features = list(mid, ext), cores=8, split_bam = T))
 cb_check<-peekbam("/Users/sfurlan/Desktop/middle.bam", n = 614127)
 all(cb_check %in% mid)
 all(mid %in% cb_check)
@@ -179,9 +214,9 @@ t2
 
 tags_little_but_many<-split(cbs2, ceiling(seq_along(cbs2)/50000))
 outputnames<-file.path("/Users/sfurlan/Desktop", paste0(seq(1, length(tags_little_but_many)), "_little.bam"))
-t1<-system.time(subsetbam(inputbam = bigbam2, outputbams = outputnames, tags = tags_little_but_many, cores=8))
+t1<-system.time(subsetbam(inputbam = bigbam2, outputbams = outputnames, features = tags_little_but_many, cores=8))
 file.remove(outputnames)
-t2<-system.time(subsetbam(inputbam = bigbam2, outputbams = outputnames, tags = tags_little_but_many, split_bam = T, cores=8))
+t2<-system.time(subsetbam(inputbam = bigbam2, outputbams = outputnames, features = tags_little_but_many, split_bam = T, cores=8))
 file.remove(outputnames)
 t1
 t2

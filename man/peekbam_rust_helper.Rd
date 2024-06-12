@@ -4,7 +4,7 @@
 \alias{peekbam_rust_helper}
 \title{peekbam_rust}
 \usage{
-peekbam_rust_helper(bam, n, tag)
+peekbam_rust_helper(bam, n, field, tag)
 }
 \description{
 peekbam_rust

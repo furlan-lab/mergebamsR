@@ -2,54 +2,45 @@
 % Please edit documentation in R/mergebamsR.R
 \name{subsetbam}
 \alias{subsetbam}
-\title{Subset a BAM file based on specific tags}
+\title{Subset BAM Files Based on Features}
 \usage{
 subsetbam(
   inputbam,
-  tags,
+  features,
   outputbams,
-  prefixes = NULL,
+  field = c("tag", "name"),
+  dump_bam = NA,
   TAG = "CB",
   cores = 1,
-  verbose = F
+  verbose = F,
+  split_bam = F
 )
 }
 \arguments{
-\item{inputbam}{A character string specifying the path to the input BAM file.}
+\item{inputbam}{A string specifying the path to the input BAM file.}
 
-\item{tags}{A character vector of tags to filter the reads by.}
+\item{features}{A list of features (e.g., cell barcodes) to subset.}
 
-\item{outputbams}{A character vector specifying the paths to the output BAM files.}
+\item{outputbams}{A vector of strings specifying the paths to the output BAM files.}
 
-\item{prefixes}{Optional; a character vector of prefixes to add to the read names in the output BAM files.
-If NULL, no prefixes are added. Defaults to NULL.}
+\item{field}{A string specifying the field to use for subsetting. Must be either \code{"tag"} ( use with TAG 'cb' for cell barcode) or \code{"name"}. Default is \code{"tag"}.}
 
-\item{TAG}{Optional; the tag used for subselection, default is "CB".}
+\item{dump_bam}{A string specifying the path to the dump BAM file. Default is \code{NA}.}
 
-\item{cores}{Optional; the number of cores to use for the process, default is 1.}
+\item{TAG}{A string specifying the BAM tag to use for subsetting. Default is \code{"CB"}.}
 
-\item{verbose}{Option to increase verbosity of output}
+\item{cores}{An integer specifying the number of cores to use for parallel processing. Default is \code{1}.}
+
+\item{verbose}{A logical indicating whether to print detailed messages. Default is \code{FALSE}.}
+
+\item{split_bam}{A logical indicating whether to split the BAM file across multiple cores. Default is \code{FALSE}.}
 }
 \value{
-No return value, called for side effects.
+None
 }
 \description{
-This function subselects reads from a BAM file based on the provided tags and
-writes the subselected reads into separate output BAM files. The subselection
-is done using a specified tag (default "CB"). This function can utilize multiple cores
-to perform the operation more efficiently.
+This function subsets a BAM file based on provided features (e.g., cell barcodes) and outputs one or more BAM files.
 }
 \details{
-It's important that the length of \code{tags} is equal to the length of \code{outputbams}.
-If \code{prefixes} is provided, its length must also match the length of \code{outputbams}.
-If any of these conditions is not met, the function will stop and throw an error.
-}
-\examples{
-subsetbam(inputbam = "path/to/input.bam", 
-          tags = c("TAG1", "TAG2"), 
-          outputbams = c("path/to/output1.bam", "path/to/output2.bam"),
-          prefixes = c("prefix1", "prefix2"),
-          TAG = "CB",
-          cores = 2)
-
+It's important that the length of \code{features} is equal to the length of \code{outputbams}.
 }

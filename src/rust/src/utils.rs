@@ -43,30 +43,60 @@ use std::error::Error;
 //     eprint!("Read {} records\n", pass_count);
 // }
 
-pub fn peekbam_rust<'a>(bam: &'a str, n: u64, tag: &'a str) -> Result<Vec<String>, extendr_api::Error> {
+pub fn peekbam_rust<'a>(bam: &'a str, n: u64, field: &'a str, tag: &'a str) -> Result<Vec<String>, extendr_api::Error> {
     let reader = bam::BamReader::from_path(bam.to_string(), 0).unwrap();
     let mut pass_count: u64 = 0;
     let mut fail_count: u64 = 0;
     let mut tags: Vec<String> = Vec::new();
-    for record in reader {
-        match record {
-            Ok(record) => {
-                let tag_value = get_tag(record, tag);
-                match tag_value {
-                    Ok(tag_value) => {
-                        if pass_count < n {
-                            tags.push(String::from_utf8(tag_value).unwrap());
-                            pass_count+=1;
-                        } else {
-                            break;
+    match field {
+        "tag" => {
+            for record in reader {
+                match record {
+                    Ok(record) => {
+                        let tag_value = get_tag(record, tag);
+                        match tag_value {
+                            Ok(tag_value) => {
+                                if pass_count < n {
+                                    tags.push(String::from_utf8(tag_value).unwrap());
+                                    pass_count+=1;
+                                } else {
+                                    break;
+                                }
+                            },
+                            Err(_) => fail_count+=1,
                         }
                     },
                     Err(_) => fail_count+=1,
                 }
-            },
-            Err(_) => fail_count+=1,
+            }
+        },
+        "name" => {
+            for record in reader {
+                match record {
+                    Ok(record) => {
+                        let value: Result<Vec<u8>, extendr_api::Error> = Ok(record.name().to_vec());
+                        match value {
+                            Ok(tag_value) => {
+                                if pass_count < n {
+                                    tags.push(String::from_utf8(tag_value).unwrap());
+                                    pass_count+=1;
+                                } else {
+                                    break;
+                                }
+                            },
+                            Err(_) => fail_count+=1,
+                        }
+                    },
+                    Err(_) => fail_count+=1,
+                }
+            }
+        },
+        _ => {
+            eprint!("ERROR: field not recognized\n");
+            return Err(extendr_api::Error::from("field not recognized"));
         }
     }
+    
     eprint!("Read {} records\n", pass_count);
     eprint!("Failed to read {} records\n", fail_count);
     Ok(tags)
